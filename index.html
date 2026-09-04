@@ -71,6 +71,7 @@
         .favorites-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .favorite-btn { background: var(--secondary); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; flex: 1; min-width: 90px; text-align: center; }
         .favorite-btn:hover { opacity: 0.9; }
+        .favorite-btn.out-of-stock { opacity: 0.4; cursor: not-allowed; background: #fae1dd; }
 
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
         .product-card { background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; transition: 0.15s; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; touch-action: manipulation; }
@@ -184,7 +185,7 @@
                     </label>
                 </div>
                 
-                <!-- Schnellwahltasten / Favoriten (Top 3 Artikel) -->
+                <!-- Dynamische Favoriten-Leiste -->
                 <div class="favorites-bar" id="favorites-container"></div>
 
                 <div class="product-grid" id="pos-product-grid"></div>
@@ -337,10 +338,11 @@
         </div>
 
         <div class="card">
-            <h3>Lagerbestand & Preise direkt verwalten</h3>
+            <h3>Lagerbestand & Preise direkt verwalten (inkl. Favoriten ⭐)</h3>
             <table>
                 <thead>
                     <tr>
+                        <th>Favorit</th>
                         <th>Artikel</th>
                         <th>Preis (€)</th>
                         <th>Bestand (Stk.)</th>
@@ -382,12 +384,12 @@
 
 <script>
     const defaultProducts = [
-        { id: 1, name: "Bier 0,33l", price: 2.50, stock: 15, minStock: 20 },
-        { id: 2, name: "Radler 0,33l", price: 2.50, stock: 40, minStock: 10 },
-        { id: 3, name: "Cola / Fanta", price: 2.00, stock: 5, minStock: 15 },
-        { id: 4, name: "Wasser", price: 1.50, stock: 80, minStock: 20 },
-        { id: 5, name: "Bratwurst", price: 3.50, stock: 3, minStock: 10 },
-        { id: 6, name: "Brezel", price: 1.50, stock: 15, minStock: 5 }
+        { id: 1, name: "Bier 0,33l", price: 2.50, stock: 15, minStock: 20, favorite: true },
+        { id: 2, name: "Radler 0,33l", price: 2.50, stock: 40, minStock: 10, favorite: false },
+        { id: 3, name: "Cola / Fanta", price: 2.00, stock: 5, minStock: 15, favorite: false },
+        { id: 4, name: "Wasser", price: 1.50, stock: 80, minStock: 20, favorite: true },
+        { id: 5, name: "Bratwurst", price: 3.50, stock: 3, minStock: 10, favorite: true },
+        { id: 6, name: "Brezel", price: 1.50, stock: 15, minStock: 5, favorite: false }
     ];
 
     const defaultMembers = [
@@ -513,13 +515,20 @@
         saveData();
     }
 
+    // Zeigt alle Artikel an, die im Lager als Favorit markiert wurden
     function renderFavorites() {
         let container = document.getElementById('favorites-container');
         container.innerHTML = '';
-        // Nimm die ersten 3 Produkte als Schnell-Favoriten
-        let favs = products.slice(0, 3);
-        favs.forEach(p => {
-            container.innerHTML += `<button class="favorite-btn" onclick="handleProductClick(${p.id})">⭐ ${p.name} (${p.price.toFixed(2)}€)</button>`;
+        
+        let favoriteProducts = products.filter(p => p.favorite);
+        if(favoriteProducts.length === 0) {
+            container.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Keine Favoriten gewählt (im Tab "Lager & Artikel" einstellbar)</span>';
+            return;
+        }
+
+        favoriteProducts.forEach(p => {
+            let isOut = p.stock <= 0;
+            container.innerHTML += `<button class="favorite-btn ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : `handleProductClick(${p.id})`}">⭐ ${p.name} (${p.price.toFixed(2)}€)</button>`;
         });
     }
 
@@ -619,11 +628,10 @@
         });
     }
 
-    // Wenn Express-Modus aktiv ist, bucht ein Klick direkt auf den Deckel
     function handleProductClick(id) {
         if (expressMode) {
             addToCart(id);
-            bookToDeckel(); // Direkt auf Deckel buchen
+            bookToDeckel();
         } else {
             addToCart(id);
         }
@@ -749,7 +757,6 @@
         renderPOS();
     }
 
-    // Modal für Barzahlung & Rückgeld
     let currentCartTotalForModal = 0;
 
     function openCashModal() {
@@ -826,7 +833,6 @@
         renderPOS();
     }
 
-    // --- TAGESABSCHLUSS ---
     function renderClosingTab() {
         const tbody = document.getElementById('closing-transactions-body');
         tbody.innerHTML = '';
@@ -933,7 +939,6 @@
         }
     }
 
-    // --- LAGER & ARTIKEL ---
     function renderStock() {
         const tbody = document.getElementById('stock-table-body');
         tbody.innerHTML = '';
@@ -944,6 +949,11 @@
 
             tbody.innerHTML += `
                 <tr>
+                    <td style="text-align: center;">
+                        <button onclick="toggleProductFavorite(${p.id})" style="background: none; border: none; font-size: 1.3rem; cursor: pointer;" title="Als Favorit ein-/ausschalten">
+                            ${p.favorite ? '⭐' : '☆'}
+                        </button>
+                    </td>
                     <td><input type="text" class="table-input" style="width: 140px; text-align: left;" value="${p.name}" onchange="updateProductText(${p.id}, 'name', this.value)"></td>
                     <td><input type="number" class="table-input" step="0.50" value="${p.price.toFixed(2)}" onchange="updateProductField(${p.id}, 'price', this.value)"></td>
                     <td><input type="number" class="table-input" value="${p.stock}" onchange="updateProductField(${p.id}, 'stock', this.value)"></td>
@@ -955,6 +965,14 @@
                 </tr>
             `;
         });
+    }
+
+    function toggleProductFavorite(id) {
+        let p = products.find(item => item.id === id);
+        if(!p) return;
+        p.favorite = !p.favorite;
+        saveData();
+        renderStock();
     }
 
     function updateProductText(id, field, value) {
@@ -1005,7 +1023,7 @@
         let minStock = parseInt(document.getElementById('new-min').value);
 
         if(!name || isNaN(price) || isNaN(stock)) return alert("Bitte alle Felder ausfüllen.");
-        products.push({ id: Date.now(), name, price, stock, minStock: isNaN(minStock) ? 5 : minStock });
+        products.push({ id: Date.now(), name, price, stock, minStock: isNaN(minStock) ? 5 : minStock, favorite: false });
         document.getElementById('new-name').value = '';
         saveData();
         renderStock();
@@ -1019,7 +1037,6 @@
         }
     }
 
-    // --- MITGLIEDER ---
     function renderMembersTab() {
         const tbody = document.getElementById('members-table-body');
         tbody.innerHTML = '';
