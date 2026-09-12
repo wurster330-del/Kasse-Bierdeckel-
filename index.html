@@ -73,13 +73,14 @@
         .favorite-btn:hover { opacity: 0.9; }
         .favorite-btn.out-of-stock { opacity: 0.4; cursor: not-allowed; background: #fae1dd; }
 
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
-        .product-card { background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; transition: 0.15s; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; touch-action: manipulation; }
+        .category-title { font-size: 0.9rem; font-weight: bold; margin: 10px 0 6px 0; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; }
+        .product-card { background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: 0.15s; display: flex; flex-direction: column; justify-content: space-between; min-height: 90px; touch-action: manipulation; }
         .product-card:hover, .product-card:active { border-color: var(--secondary); background: rgba(22, 160, 133, 0.1); }
         .product-card.out-of-stock { opacity: 0.4; cursor: not-allowed; background: #fae1dd; }
-        .product-name { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
-        .product-price { color: var(--secondary); font-weight: bold; font-size: 1rem; margin-bottom: 4px; }
-        .product-stock { font-size: 0.85rem; opacity: 0.7; }
+        .product-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
+        .product-price { color: var(--secondary); font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+        .product-stock { font-size: 0.8rem; opacity: 0.7; }
 
         /* Aktueller Bon / Kassenbereich */
         .cart-section { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 100%; }
@@ -132,6 +133,13 @@
 
         .manual-cash-box { background: rgba(22, 160, 133, 0.1); border: 1px solid var(--secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
 
+        /* Sub-Tabs innerhalb von Inhaber */
+        .sub-tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .sub-tab-btn { background: transparent; border: none; padding: 8px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer; color: var(--text-color); border-radius: 4px; }
+        .sub-tab-btn.active { background: var(--secondary); color: white; }
+        .sub-content { display: none; }
+        .sub-content.active { display: block; }
+
         /* Modal / Popups */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.active { display: flex; }
@@ -159,7 +167,7 @@
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pos', event)">🛒 Kasse & Bierdeckel</button>
-        <button class="tab-btn" onclick="switchTab('members', event)">👥 Mitglieder & Deckel</button>
+        <button class="tab-btn" onclick="switchTab('members', event)">👥 Inhaber & Deckel</button>
         <button class="tab-btn" onclick="switchTab('closing', event)">📋 Tagesabschluss</button>
         <button class="tab-btn" onclick="switchTab('stock', event)">📦 Lager & Artikel</button>
     </div>
@@ -188,7 +196,12 @@
                 <!-- Dynamische Favoriten-Leiste -->
                 <div class="favorites-bar" id="favorites-container"></div>
 
-                <div class="product-grid" id="pos-product-grid"></div>
+                <!-- Getrennte Sektionen für Getränke und Speisen/Verzehr -->
+                <div class="category-title">🥤 Getränke</div>
+                <div class="product-grid" id="pos-drinks-grid"></div>
+
+                <div class="category-title">🍔 Verzehr & Speisen</div>
+                <div class="product-grid" id="pos-food-grid"></div>
             </div>
 
             <!-- 3. SPALTE: Aktueller Bon & Aktionen -->
@@ -232,32 +245,107 @@
         </div>
     </div>
 
-    <!-- TAB 2: MITGLIEDER & DECKEL -->
+    <!-- TAB 2: INHABER & DECKEL -->
     <div id="tab-members" class="tab-content">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Offene Deckel-Summe gesamt</h3>
-                <div class="value" id="stat-total-debt">0,00 €</div>
+        <div class="sub-tabs">
+            <button class="sub-tab-btn active" onclick="switchSubTab('members-list', event)">👥 Mitglieder & Deckel</button>
+            <button class="sub-tab-btn" onclick="switchSubTab('turnover-share', event)">📈 Prozentuale Getränke-Auswertung</button>
+        </div>
+
+        <!-- Sub-Tab 1: Mitglieder-Liste -->
+        <div id="sub-members-list" class="sub-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Offene Deckel-Summe gesamt</h3>
+                    <div class="value" id="stat-total-debt">0,00 €</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Mitglieder gesamt</h3>
+                    <div class="value" id="stat-total-members">0</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>Mitglieder gesamt</h3>
-                <div class="value" id="stat-total-members">0</div>
+
+            <div class="card">
+                <h3>Mitglieder & Aktuelle Bierdeckel-Stände</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name / Mitglied</th>
+                            <th>Offener Deckel (€)</th>
+                            <th>Letzte Aktivität</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="members-table-body"></tbody>
+                </table>
             </div>
         </div>
 
-        <div class="card">
-            <h3>Mitglieder & Aktuelle Bierdeckel-Stände</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name / Mitglied</th>
-                        <th>Offener Deckel (€)</th>
-                        <th>Letzte Aktivität</th>
-                        <th>Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody id="members-table-body"></tbody>
-            </table>
+        <!-- Sub-Tab 2: Prozentuale Getränke-Auswertung (Ohne Speisen/Verzehr für den Prozentwert) -->
+        <div id="sub-turnover-share" class="sub-content">
+            <div class="card" style="background: rgba(22, 160, 133, 0.05); border: 1px solid var(--secondary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h3 style="margin-bottom: 4px;">📊 Prozentuale Getränke-Auswertung & Verzehr (Separat)</h3>
+                        <p style="font-size: 0.9rem; opacity: 0.8;">Prozentwert wird ausschließlich auf Getränke angewendet. Verzehr/Speisen werden separat inkludiert (ohne Prozente-Abzug).</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-weight: bold; font-size: 0.95rem;">Prozentsatz (%):</label>
+                        <input type="number" id="percentage-input" class="table-input" value="10" min="0" max="100" step="1" onchange="renderTurnoverShareTab()" style="width: 80px; text-align: center; font-weight: bold;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Gesamt-Getränkeumsatz</h3>
+                    <div class="value" id="share-total-drinks">0,00 €</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Gewählter Prozentsatz (Getränke)</h3>
+                    <div class="value" id="share-total-percentage-val" style="color: var(--accent);">0,00 €</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Verzehr / Speisen (100% inkl.)</h3>
+                    <div class="value" id="share-total-food-val" style="color: #3498db;">0,00 €</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Gesamt-Endsumme (Getränk-Anteil + Verzehr)</h3>
+                    <div class="value" id="share-total-combined-val" style="color: #27ae60;">0,00 €</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Getränke-Aufstellung & Prozentanteile</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Getränk</th>
+                            <th>Verkaufte Menge</th>
+                            <th>Einzelpreis</th>
+                            <th>Getränke-Umsatz (€)</th>
+                            <th>Einzelwert (<span class="display-percent-label">10</span>%)</th>
+                            <th>Gesamtwert (<span class="display-percent-label">10</span>%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="turnover-share-table-body"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>Verzehr & Speisen (Ohne Prozent-Abzug / 100% Wert)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Speise / Verzehr</th>
+                            <th>Verkaufte Menge</th>
+                            <th>Einzelpreis</th>
+                            <th>Umsatz Gesamt (100%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="turnover-share-food-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -384,12 +472,12 @@
 
 <script>
     const defaultProducts = [
-        { id: 1, name: "Bier 0,33l", price: 2.50, stock: 15, minStock: 20, favorite: true },
-        { id: 2, name: "Radler 0,33l", price: 2.50, stock: 40, minStock: 10, favorite: false },
-        { id: 3, name: "Cola / Fanta", price: 2.00, stock: 5, minStock: 15, favorite: false },
-        { id: 4, name: "Wasser", price: 1.50, stock: 80, minStock: 20, favorite: true },
-        { id: 5, name: "Bratwurst", price: 3.50, stock: 3, minStock: 10, favorite: true },
-        { id: 6, name: "Brezel", price: 1.50, stock: 15, minStock: 5, favorite: false }
+        { id: 1, name: "Bier 0,33l", price: 2.50, stock: 15, minStock: 20, favorite: true, category: "drink" },
+        { id: 2, name: "Radler 0,33l", price: 2.50, stock: 40, minStock: 10, favorite: false, category: "drink" },
+        { id: 3, name: "Cola / Fanta", price: 2.00, stock: 5, minStock: 15, favorite: false, category: "drink" },
+        { id: 4, name: "Wasser", price: 1.50, stock: 80, minStock: 20, favorite: true, category: "drink" },
+        { id: 5, name: "Bratwurst", price: 3.50, stock: 3, minStock: 10, favorite: true, category: "food" },
+        { id: 6, name: "Brezel", price: 1.50, stock: 15, minStock: 5, favorite: false, category: "food" }
     ];
 
     const defaultMembers = [
@@ -486,11 +574,22 @@
         if(tabId === 'stock') renderStock();
     }
 
+    function switchSubTab(subId, event) {
+        document.querySelectorAll('#tab-members .sub-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('#tab-members .sub-tab-btn').forEach(el => el.classList.remove('active'));
+
+        document.getElementById('sub-' + subId).classList.add('active');
+        if (event && event.currentTarget) { event.currentTarget.classList.add('active'); }
+
+        if (subId === 'members-list') renderMembersTab();
+        if (subId === 'turnover-share') renderTurnoverShareTab();
+    }
+
     function renderPOS() {
         renderMemberList();
         renderRecentBuyers();
         renderFavorites();
-        renderProductGrid();
+        renderProductGrids();
         renderCart();
         updateActiveBuyerDisplay();
         updateLivePreview();
@@ -515,7 +614,6 @@
         saveData();
     }
 
-    // Zeigt alle Artikel an, die im Lager als Favorit markiert wurden
     function renderFavorites() {
         let container = document.getElementById('favorites-container');
         container.innerHTML = '';
@@ -611,12 +709,15 @@
         }
     }
 
-    function renderProductGrid() {
-        const grid = document.getElementById('pos-product-grid');
-        grid.innerHTML = '';
+    function renderProductGrids() {
+        const drinksGrid = document.getElementById('pos-drinks-grid');
+        const foodGrid = document.getElementById('pos-food-grid');
+        drinksGrid.innerHTML = '';
+        foodGrid.innerHTML = '';
+
         products.forEach(p => {
             let isOut = p.stock <= 0;
-            grid.innerHTML += `
+            let cardHtml = `
                 <div class="product-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : `handleProductClick(${p.id})`}">
                     <div>
                         <div class="product-name">${p.name}</div>
@@ -625,7 +726,16 @@
                     <div class="product-stock">Lager: ${p.stock}</div>
                 </div>
             `;
+
+            if (p.category === 'food' || (!p.category && (p.name.toLowerCase().includes('bratwurst') || p.name.toLowerCase().includes('brezel') || p.name.toLowerCase().includes('essen')))) {
+                foodGrid.innerHTML += cardHtml;
+            } else {
+                drinksGrid.innerHTML += cardHtml;
+            }
         });
+
+        if (drinksGrid.innerHTML === '') drinksGrid.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Keine Getränke vorhanden</span>';
+        if (foodGrid.innerHTML === '') foodGrid.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Kein Verzehr / Speisen vorhanden</span>';
     }
 
     function handleProductClick(id) {
@@ -947,6 +1057,8 @@
             if(p.stock <= 0) badge = '<span class="badge badge-red">Ausverkauft</span>';
             else if(p.stock <= p.minStock) badge = '<span class="badge badge-yellow">Gering</span>';
 
+            let isDrink = p.category === 'drink' || (!p.category && !p.name.toLowerCase().includes('bratwurst') && !p.name.toLowerCase().includes('brezel') && !p.name.toLowerCase().includes('essen'));
+
             tbody.innerHTML += `
                 <tr>
                     <td style="text-align: center;">
@@ -954,7 +1066,10 @@
                             ${p.favorite ? '⭐' : '☆'}
                         </button>
                     </td>
-                    <td><input type="text" class="table-input" style="width: 140px; text-align: left;" value="${p.name}" onchange="updateProductText(${p.id}, 'name', this.value)"></td>
+                    <td>
+                        <input type="text" class="table-input" style="width: 140px; text-align: left;" value="${p.name}" onchange="updateProductText(${p.id}, 'name', this.value)">
+                        <br><small style="opacity:0.6;">${isDrink ? 'Getränk' : 'Speise'}</small>
+                    </td>
                     <td><input type="number" class="table-input" step="0.50" value="${p.price.toFixed(2)}" onchange="updateProductField(${p.id}, 'price', this.value)"></td>
                     <td><input type="number" class="table-input" value="${p.stock}" onchange="updateProductField(${p.id}, 'stock', this.value)"></td>
                     <td><input type="number" class="table-input" value="${p.minStock}" onchange="updateProductField(${p.id}, 'minStock', this.value)"></td>
@@ -979,6 +1094,9 @@
         let p = products.find(item => item.id === id);
         if(!p || !value.trim()) return;
         p[field] = value.trim();
+        if (field === 'name') {
+            p.category = (value.toLowerCase().includes('bratwurst') || value.toLowerCase().includes('brezel') || value.toLowerCase().includes('essen')) ? 'food' : 'drink';
+        }
         saveData();
     }
 
@@ -1023,7 +1141,10 @@
         let minStock = parseInt(document.getElementById('new-min').value);
 
         if(!name || isNaN(price) || isNaN(stock)) return alert("Bitte alle Felder ausfüllen.");
-        products.push({ id: Date.now(), name, price, stock, minStock: isNaN(minStock) ? 5 : minStock, favorite: false });
+        
+        let category = (name.toLowerCase().includes('bratwurst') || name.toLowerCase().includes('brezel') || name.toLowerCase().includes('essen')) ? 'food' : 'drink';
+
+        products.push({ id: Date.now(), name, price, stock, minStock: isNaN(minStock) ? 5 : minStock, favorite: false, category });
         document.getElementById('new-name').value = '';
         saveData();
         renderStock();
@@ -1057,6 +1178,105 @@
         });
         document.getElementById('stat-total-debt').innerText = totalDebtAll.toFixed(2) + ' €';
         document.getElementById('stat-total-members').innerText = members.length;
+    }
+
+    function renderTurnoverShareTab() {
+        let percentInput = parseFloat(document.getElementById('percentage-input').value) || 0;
+        
+        document.querySelectorAll('.display-percent-label').forEach(el => {
+            el.innerText = percentInput;
+        });
+
+        // 1. Datenstrukturen aufbauen
+        let drinkSales = {};
+        let foodSales = {};
+
+        products.forEach(p => {
+            let isDrink = p.category === 'drink' || (!p.category && !p.name.toLowerCase().includes('bratwurst') && !p.name.toLowerCase().includes('brezel') && !p.name.toLowerCase().includes('essen'));
+            if (isDrink) {
+                drinkSales[p.name] = { qty: 0, price: p.price };
+            } else {
+                foodSales[p.name] = { qty: 0, price: p.price };
+            }
+        });
+
+        transactions.forEach(t => {
+            if (t.type === 'Barbezahlt' || t.type === 'Deckel') {
+                if (t.items) {
+                    t.items.forEach(i => {
+                        if (i.name.includes('Deckel-Begleichung')) return;
+                        
+                        let matchedProd = products.find(p => p.name === i.name);
+                        let isDrink = matchedProd ? (matchedProd.category === 'drink' || (!matchedProd.category && !matchedProd.name.toLowerCase().includes('bratwurst') && !matchedProd.name.toLowerCase().includes('brezel') && !matchedProd.name.toLowerCase().includes('essen'))) : (!i.name.toLowerCase().includes('bratwurst') && !i.name.toLowerCase().includes('brezel') && !i.name.toLowerCase().includes('essen'));
+
+                        if (isDrink) {
+                            if (!drinkSales[i.name]) drinkSales[i.name] = { qty: 0, price: i.price };
+                            drinkSales[i.name].qty += i.qty;
+                        } else {
+                            if (!foodSales[i.name]) foodSales[i.name] = { qty: 0, price: i.price };
+                            foodSales[i.name].qty += i.qty;
+                        }
+                    });
+                }
+            }
+        });
+
+        // Rendering Getränke-Tabelle
+        const tbodyDrinks = document.getElementById('turnover-share-table-body');
+        tbodyDrinks.innerHTML = '';
+        let calculatedTotalDrinks = 0;
+        let calculatedTotalPercentageVal = 0;
+
+        for (let [name, data] of Object.entries(drinkSales)) {
+            let turnover = data.qty * data.price;
+            let singleVal = (data.price * percentInput) / 100;
+            let totalVal = (turnover * percentInput) / 100;
+
+            calculatedTotalDrinks += turnover;
+            calculatedTotalPercentageVal += totalVal;
+
+            tbodyDrinks.innerHTML += `
+                <tr>
+                    <td><strong>${name}</strong></td>
+                    <td>${data.qty} Stk.</td>
+                    <td>${data.price.toFixed(2)} €</td>
+                    <td>${turnover.toFixed(2)} €</td>
+                    <td style="color: var(--secondary); font-weight: 600;">${singleVal.toFixed(2)} €</td>
+                    <td style="color: var(--accent); font-weight: bold;">${totalVal.toFixed(2)} €</td>
+                </tr>
+            `;
+        }
+
+        // Rendering Speisen/Verzehr-Tabelle (100% ohne Prozentabzug)
+        const tbodyFood = document.getElementById('turnover-share-food-table-body');
+        tbodyFood.innerHTML = '';
+        let calculatedTotalFood = 0;
+
+        for (let [name, data] of Object.entries(foodSales)) {
+            let turnoverFood = data.qty * data.price;
+            calculatedTotalFood += turnoverFood;
+
+            tbodyFood.innerHTML += `
+                <tr>
+                    <td><strong>${name}</strong></td>
+                    <td>${data.qty} Stk.</td>
+                    <td>${data.price.toFixed(2)} €</td>
+                    <td style="color: #3498db; font-weight: bold;">${turnoverFood.toFixed(2)} €</td>
+                </tr>
+            `;
+        }
+
+        if (Object.keys(foodSales).length === 0 || calculatedTotalFood === 0) {
+            tbodyFood.innerHTML = `<tr><td colspan="4" style="text-align: center; opacity: 0.6;">Kein Verzehr / Speisen in diesem Zeitraum gebucht.</td></tr>`;
+        }
+
+        let combinedTotalVal = calculatedTotalPercentageVal + calculatedTotalFood;
+
+        // UI Statistiken aktualisieren
+        document.getElementById('share-total-drinks').innerText = calculatedTotalDrinks.toFixed(2) + ' €';
+        document.getElementById('share-total-percentage-val').innerText = calculatedTotalPercentageVal.toFixed(2) + ' €';
+        document.getElementById('share-total-food-val').innerText = calculatedTotalFood.toFixed(2) + ' €';
+        document.getElementById('share-total-combined-val').innerText = combinedTotalVal.toFixed(2) + ' €';
     }
 
     function updateMemberText(id, value) {
