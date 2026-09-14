@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vereinskasse & Digitaler Bierdeckel</title>
+    <title>Vereinskasse & Digitaler Bierdeckel (Mit Passwortschutz)</title>
     <style>
         :root {
             --primary: #2c3e50;
@@ -34,7 +34,7 @@
         header h1 { font-size: 1.2rem; }
         
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-        .tab-btn { background: #e0e0e0; border: none; padding: 14px 18px; font-size: 1rem; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; min-height: 48px; touch-action: manipulation; }
+        .tab-btn { background: #e0e0e0; border: none; padding: 12px 16px; font-size: 0.95rem; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; min-height: 48px; touch-action: manipulation; }
         [data-theme="dark"] .tab-btn { background: #333; color: #fff; }
         .tab-btn.active { background: var(--secondary); color: white; }
         
@@ -106,9 +106,6 @@
         .btn-danger { background: var(--accent); color: white; }
         .btn-danger:hover { opacity: 0.9; }
 
-        .live-preview-box { background: var(--card-bg); border: 1px solid var(--border); padding: 12px 15px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-around; font-size: 0.95rem; text-align: center; flex-wrap: wrap; gap: 10px; }
-        .live-preview-item div { font-weight: bold; font-size: 1.05rem; color: var(--secondary); }
-
         table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.95rem; }
         th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: var(--light); font-weight: 600; }
@@ -134,11 +131,17 @@
         .manual-cash-box { background: rgba(22, 160, 133, 0.1); border: 1px solid var(--secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
 
         /* Sub-Tabs innerhalb von Inhaber */
-        .sub-tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .sub-tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px; flex-wrap: wrap; }
         .sub-tab-btn { background: transparent; border: none; padding: 8px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer; color: var(--text-color); border-radius: 4px; }
         .sub-tab-btn.active { background: var(--secondary); color: white; }
         .sub-content { display: none; }
         .sub-content.active { display: block; }
+
+        /* Login-Overlay für Inhaber-Bereich */
+        .auth-container { text-align: center; padding: 40px 20px; max-width: 450px; margin: 30px auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .auth-container h2 { margin-bottom: 10px; font-size: 1.4rem; }
+        .auth-container p { font-size: 0.95rem; opacity: 0.8; margin-bottom: 20px; }
+        .auth-input { width: 100%; padding: 14px; font-size: 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); margin-bottom: 15px; text-align: center; }
 
         /* Modal / Popups */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
@@ -154,25 +157,22 @@
 <div class="container">
     <header>
         <h1>🏛️ Vereins-Kassensystem</h1>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <button class="btn btn-warning" style="width: auto; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0;" onclick="toggleTheme()" id="theme-toggle-btn">🌙 Nachtmodus</button>
-            <button class="btn btn-warning" style="width: auto; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0;" onclick="exportBackupJson()">💾 Backup</button>
-            <label class="btn btn-warning" style="width: auto; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; display: inline-flex; align-items: center; cursor: pointer;">
-                📂 Laden <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importBackupJson(event)">
-            </label>
-            <button class="btn btn-primary" style="width: auto; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0;" onclick="openNewMemberModal()">+ Mitglied</button>
-            <button class="btn btn-danger" style="width: auto; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0;" onclick="resetData()">Reset</button>
+        <div id="auth-status-badge" style="font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; display: none;">
+            Status: <span id="auth-role-text" style="font-weight: bold;">Gesperrt</span>
         </div>
     </header>
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('pos', event)">🛒 Kasse & Bierdeckel</button>
-        <button class="tab-btn" onclick="switchTab('members', event)">👥 Inhaber & Deckel</button>
-        <button class="tab-btn" onclick="switchTab('closing', event)">📋 Tagesabschluss</button>
-        <button class="tab-btn" onclick="switchTab('stock', event)">📦 Lager & Artikel</button>
+    <div class="tabs" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="tab-btn active" onclick="switchTab('pos', event)">🛒 Kasse</button>
+            <button class="tab-btn" onclick="switchTab('deckel', event)">🍺 Bierdeckel</button>
+        </div>
+        <div>
+            <button class="tab-btn" onclick="switchTab('members', event)" id="tab-btn-members">👥 Vorstand & Verwaltung</button>
+        </div>
     </div>
 
-    <!-- TAB 1: KASSE & BIERDECKEL -->
+    <!-- TAB 1: KASSE -->
     <div id="tab-pos" class="tab-content active">
         <div class="pos-grid">
             
@@ -184,7 +184,7 @@
                 <div class="member-list" id="pos-member-list"></div>
             </div>
 
-            <!-- 2. SPALTE: Artikel-Auswahl & Favoriten -->
+            <!-- 2. SPALTE: Artikel-Auswahl & Favoriten (Getrennt nach Getränken und Speisen) -->
             <div class="card" style="margin-bottom:0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <h3 style="font-size: 1rem;">2. Bedarf auswählen</h3>
@@ -196,12 +196,17 @@
                 <!-- Dynamische Favoriten-Leiste -->
                 <div class="favorites-bar" id="favorites-container"></div>
 
-                <!-- Getrennte Sektionen für Getränke und Speisen/Verzehr -->
-                <div class="category-title">🥤 Getränke</div>
-                <div class="product-grid" id="pos-drinks-grid"></div>
+                <!-- Sektion 1: Getränke -->
+                <div style="background: rgba(22, 160, 133, 0.05); border: 1px solid var(--secondary); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+                    <div class="category-title" style="margin-top:0; color: var(--secondary);">🥤 Getränke & Flüssiges</div>
+                    <div class="product-grid" id="pos-drinks-grid"></div>
+                </div>
 
-                <div class="category-title">🍔 Verzehr & Speisen</div>
-                <div class="product-grid" id="pos-food-grid"></div>
+                <!-- Sektion 2: Verzehr & Speisen -->
+                <div style="background: rgba(52, 152, 219, 0.05); border: 1px solid #3498db; padding: 10px; border-radius: 8px;">
+                    <div class="category-title" style="margin-top:0; color: #3498db;">🍔 Verzehr & Speisen</div>
+                    <div class="product-grid" id="pos-food-grid"></div>
+                </div>
             </div>
 
             <!-- 3. SPALTE: Aktueller Bon & Aktionen -->
@@ -227,247 +232,338 @@
                 <button class="btn btn-success" onclick="openCashModal()">💶 Direkt Bar bezahlt</button>
             </div>
         </div>
-
-        <!-- Live-Vorschau Box -->
-        <div class="live-preview-box">
-            <div class="live-preview-item">
-                <span>💵 Bargeld in Kasse (heute):</span>
-                <div id="live-cash-total" style="color: #27ae60;">0,00 €</div>
-            </div>
-            <div class="live-preview-item">
-                <span>📝 Neue Bierdeckel (heute):</span>
-                <div id="live-debt-total" style="color: var(--accent);">0,00 €</div>
-            </div>
-            <div class="live-preview-item">
-                <span>📊 Gesamt-Tagesumsatz:</span>
-                <div id="live-overall-total">0,00 €</div>
-            </div>
-        </div>
     </div>
 
-    <!-- TAB 2: INHABER & DECKEL -->
+    <!-- TAB 2: INHABER / GESCHÜTZTER BEREICH -->
     <div id="tab-members" class="tab-content">
-        <div class="sub-tabs">
-            <button class="sub-tab-btn active" onclick="switchSubTab('members-list', event)">👥 Mitglieder & Deckel</button>
-            <button class="sub-tab-btn" onclick="switchSubTab('turnover-share', event)">📈 Prozentuale Getränke-Auswertung</button>
-        </div>
-
-        <!-- Sub-Tab 1: Mitglieder-Liste -->
-        <div id="sub-members-list" class="sub-content active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Offene Deckel-Summe gesamt</h3>
-                    <div class="value" id="stat-total-debt">0,00 €</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Mitglieder gesamt</h3>
-                    <div class="value" id="stat-total-members">0</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>Mitglieder & Aktuelle Bierdeckel-Stände</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name / Mitglied</th>
-                            <th>Offener Deckel (€)</th>
-                            <th>Letzte Aktivität</th>
-                            <th>Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="members-table-body"></tbody>
-                </table>
+        
+        <!-- LOGIN SCREEN (Wird angezeigt, wenn noch kein Passwort eingegeben wurde) -->
+        <div id="admin-login-box" class="auth-container">
+            <h2>🔒 Geschützter Inhaber-Bereich</h2>
+            <p>Bitte geben Sie das **Mitglieder-Passwort** (eingeschränkte Ansicht) oder das **Vorstand-Passwort** (volle Rechte) ein:</p>
+            <input type="password" id="admin-password-input" class="auth-input" placeholder="Passwort eingeben..." onkeydown="if(event.key === 'Enter') checkAdminLogin()">
+            <button class="btn btn-primary" onclick="checkAdminLogin()">🔓 Bereich entsperren</button>
+            <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.6;">
+                Standard-Passwörter (in Einstellungen anpassbar):<br>
+                Mitglieder: <code style="background:rgba(0,0,0,0.05); padding:2px 4px; border-radius:3px;">mitglied123</code> | Vorstand: <code style="background:rgba(0,0,0,0.05); padding:2px 4px; border-radius:3px;">vorstand123</code>
             </div>
         </div>
 
-        <!-- Sub-Tab 2: Prozentuale Getränke-Auswertung (Ohne Speisen/Verzehr für den Prozentwert) -->
-        <div id="sub-turnover-share" class="sub-content">
-            <div class="card" style="background: rgba(22, 160, 133, 0.05); border: 1px solid var(--secondary);">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <h3 style="margin-bottom: 4px;">📊 Prozentuale Getränke-Auswertung & Verzehr (Separat)</h3>
-                        <p style="font-size: 0.9rem; opacity: 0.8;">Prozentwert wird ausschließlich auf Getränke angewendet. Verzehr/Speisen werden separat inkludiert (ohne Prozente-Abzug).</p>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <label style="font-weight: bold; font-size: 0.95rem;">Prozentsatz (%):</label>
-                        <input type="number" id="percentage-input" class="table-input" value="10" min="0" max="100" step="1" onchange="renderTurnoverShareTab()" style="width: 80px; text-align: center; font-weight: bold;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Gesamt-Getränkeumsatz</h3>
-                    <div class="value" id="share-total-drinks">0,00 €</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Gewählter Prozentsatz (Getränke)</h3>
-                    <div class="value" id="share-total-percentage-val" style="color: var(--accent);">0,00 €</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Verzehr / Speisen (100% inkl.)</h3>
-                    <div class="value" id="share-total-food-val" style="color: #3498db;">0,00 €</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Gesamt-Endsumme (Getränk-Anteil + Verzehr)</h3>
-                    <div class="value" id="share-total-combined-val" style="color: #27ae60;">0,00 €</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>Getränke-Aufstellung & Prozentanteile</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Getränk</th>
-                            <th>Verkaufte Menge</th>
-                            <th>Einzelpreis</th>
-                            <th>Getränke-Umsatz (€)</th>
-                            <th>Einzelwert (<span class="display-percent-label">10</span>%)</th>
-                            <th>Gesamtwert (<span class="display-percent-label">10</span>%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="turnover-share-table-body"></tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <h3>Verzehr & Speisen (Ohne Prozent-Abzug / 100% Wert)</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Speise / Verzehr</th>
-                            <th>Verkaufte Menge</th>
-                            <th>Einzelpreis</th>
-                            <th>Umsatz Gesamt (100%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="turnover-share-food-table-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 3: TAGESABSCHLUSS & KASSENSTURZ -->
-    <div id="tab-closing" class="tab-content">
-        <div class="card">
-            <h3 style="margin-bottom: 5px;">📋 Tagesabschluss & Kassensturz</h3>
-            <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 15px;">Übersicht aller heutigen Einnahmen, Direktzahlungen und Schulden.</p>
+        <!-- GESCHÜTZTER INHALT (Wird erst nach erfolgreichem Login eingeblendet) -->
+        <div id="admin-content-box" style="display: none;">
             
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Bargeld-Einnahmen</h3>
-                    <div class="value" id="closing-cash-sum" style="color: #27ae60;">0,00 €</div>
+            <div class="sub-tabs">
+                <button class="sub-tab-btn active" onclick="switchSubTab('members-list', event)">👥 Mitglieder-Verwaltung</button>
+                <button class="sub-tab-btn" onclick="switchSubTab('turnover-share', event)" id="sub-btn-turnover">📈 Prozentuale Getränke-Auswertung</button>
+                <button class="sub-tab-btn" onclick="switchSubTab('closing', event)" id="sub-btn-closing">📋 Tagesabschluss</button>
+                <button class="sub-tab-btn" onclick="switchSubTab('stock', event)" id="sub-btn-stock">📦 Lager & Artikel</button>
+                <button class="sub-tab-btn" onclick="switchSubTab('settings', event)" id="sub-btn-settings">⚙️ Passwörter & Einstellungen</button>
+            </div>
+
+            <!-- System-Steuerungsleiste für Inhaber -->
+            <div class="card" style="background: var(--light); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
+                <button class="btn btn-warning" style="width: auto; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 0;" onclick="toggleTheme()" id="theme-toggle-btn">🌙 Nachtmodus</button>
+                <button class="btn btn-warning" style="width: auto; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 0;" onclick="exportBackupJson()">💾 Backup</button>
+                <label class="btn btn-warning" style="width: auto; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 0; display: inline-flex; align-items: center; cursor: pointer;" id="action-btn-import">
+                    📂 Laden <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importBackupJson(event)">
+                </label>
+                <button class="btn btn-primary" style="width: auto; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 0;" onclick="openNewMemberModal()">+ Mitglied</button>
+                <button class="btn btn-danger" style="width: auto; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 0;" id="action-btn-reset" onclick="resetData()">Reset</button>
+            </div>
+
+            <!-- Sub-Tab 1: Mitglieder-Liste & Schulden -->
+            <div id="sub-members-list" class="sub-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Offene Deckel-Summe gesamt</h3>
+                        <div class="value" id="stat-total-debt">0,00 €</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Mitglieder gesamt</h3>
+                        <div class="value" id="stat-total-members">0</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3>Auf Deckel geschrieben</h3>
-                    <div class="value" id="closing-debt-sum" style="color: var(--accent);">0,00 €</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Gesamtumsatz heute</h3>
-                    <div class="value" id="closing-total-sum">0,00 €</div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <h3>Mitglieder & Schulden-Verwaltung</h3>
+                        <button class="btn btn-primary" style="width: auto; padding: 10px 16px; font-size: 0.9rem; margin-bottom: 0;" onclick="openNewMemberModal()">+ Neues Mitglied hinzufügen</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name / Mitglied</th>
+                                <th>Offener Deckel (€)</th>
+                                <th>Letzte Aktivität</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-table-body"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="manual-cash-box">
-                <div>
-                    <h4 style="font-size: 1.05rem;">💶 Kassenbestand</h4>
-                    <p style="font-size: 0.9rem; opacity: 0.8;">Gesamtumsatz zum Kassenbestand addieren oder manuell anpassen.</p>
+            <!-- Sub-Tab 2: Prozentuale Getränke-Auswertung -->
+            <div id="sub-turnover-share" class="sub-content">
+                <div class="card" style="background: rgba(22, 160, 133, 0.05); border: 1px solid var(--secondary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 style="margin-bottom: 4px;">📊 Prozentuale Getränke-Auswertung & Verzehr (Separat)</h3>
+                            <p style="font-size: 0.9rem; opacity: 0.8;">Prozentwert wird ausschließlich auf Getränke angewendet. Verzehr/Speisen werden separat inkludiert.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: bold; font-size: 0.95rem;">Prozentsatz (%):</label>
+                            <input type="number" id="percentage-input" class="table-input" value="10" min="0" max="100" step="1" onchange="renderTurnoverShareTab()" style="width: 80px; text-align: center; font-weight: bold;">
+                        </div>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="width: auto; padding: 12px 16px; margin-bottom: 0; font-size: 0.95rem;" onclick="copyTotalToCash()">📥 Gesamtumsatz addieren</button>
-                    <input type="number" id="manual-cash-input" step="0.50" class="table-input" style="width: 130px; font-size: 1.2rem; padding: 10px; text-align: right;" onchange="updateManualCash(this.value)" value="0.00">
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Gesamt-Getränkeumsatz</h3>
+                        <div class="value" id="share-total-drinks">0,00 €</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Gewählter Prozentsatz (Getränke)</h3>
+                        <div class="value" id="share-total-percentage-val" style="color: var(--accent);">0,00 €</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Verzehr / Speisen (100% inkl.)</h3>
+                        <div class="value" id="share-total-food-val" style="color: #3498db;">0,00 €</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Gesamt-Endsumme</h3>
+                        <div class="value" id="share-total-combined-val" style="color: #27ae60;">0,00 €</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Getränke-Aufstellung & Prozentanteile</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Getränk</th>
+                                <th>Verkaufte Menge</th>
+                                <th>Einzelpreis</th>
+                                <th>Getränke-Umsatz (€)</th>
+                                <th>Einzelwert (<span class="display-percent-label">10</span>%)</th>
+                                <th>Gesamtwert (<span class="display-percent-label">10</span>%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="turnover-share-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h3>Verzehr & Speisen (100% Wert)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Speise / Verzehr</th>
+                                <th>Verkaufte Menge</th>
+                                <th>Einzelpreis</th>
+                                <th>Umsatz Gesamt (100%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="turnover-share-food-table-body"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                <button class="btn btn-warning" style="width: auto;" onclick="exportClosingCsv()">📥 Kassenbericht als CSV</button>
-                <button class="btn btn-danger" style="width: auto;" onclick="resetDayTransactions()">🧹 Kasse für nächsten Tag leeren</button>
-            </div>
-        </div>
+            <!-- Sub-Tab 3: Tagesabschluss & Kassensturz -->
+            <div id="sub-closing" class="sub-content">
+                <div class="card">
+                    <h3 style="margin-bottom: 5px;">📋 Tagesabschluss & Kassensturz</h3>
+                    <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 15px;">Übersicht aller heutigen Einnahmen, Direktzahlungen und Schulden.</p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Bargeld-Einnahmen</h3>
+                            <div class="value" id="closing-cash-sum" style="color: #27ae60;">0,00 €</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Auf Deckel geschrieben</h3>
+                            <div class="value" id="closing-debt-sum" style="color: var(--accent);">0,00 €</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Gesamtumsatz heute</h3>
+                            <div class="value" id="closing-total-sum">0,00 €</div>
+                        </div>
+                    </div>
 
-        <div class="card">
-            <h3>Transaktionen der heutigen Session</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Uhrzeit</th>
-                        <th>Person / Gast</th>
-                        <th>Art / Typ</th>
-                        <th>Details</th>
-                        <th>Betrag</th>
-                    </tr>
-                </thead>
-                <tbody id="closing-transactions-body"></tbody>
-            </table>
+                    <div class="manual-cash-box">
+                        <div>
+                            <h4 style="font-size: 1.05rem;">💶 Kassenbestand</h4>
+                            <p style="font-size: 0.9rem; opacity: 0.8;">Gesamtumsatz zum Kassenbestand addieren oder manuell anpassen.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" style="width: auto; padding: 12px 16px; margin-bottom: 0; font-size: 0.95rem;" onclick="copyTotalToCash()">📥 Gesamtumsatz addieren</button>
+                            <input type="number" id="manual-cash-input" step="0.50" class="table-input" style="width: 130px; font-size: 1.2rem; padding: 10px; text-align: right;" onchange="updateManualCash(this.value)" value="0.00">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-warning" style="width: auto;" onclick="exportClosingCsv()">📥 Kassenbericht als CSV</button>
+                        <button class="btn btn-danger" style="width: auto;" onclick="resetDayTransactions()">🧹 Kasse für nächsten Tag leeren</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Transaktionen der heutigen Session</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Uhrzeit</th>
+                                <th>Person / Gast</th>
+                                <th>Art / Typ</th>
+                                <th>Details</th>
+                                <th>Betrag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="closing-transactions-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub-Tab 4: Lager & Artikel -->
+            <div id="sub-stock" class="sub-content">
+                <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: rgba(22, 160, 133, 0.1); border: 1px solid var(--secondary); flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h3 style="margin-bottom: 3px;">📊 Automatische Nachbestell-Liste</h3>
+                        <p style="font-size: 0.95rem; opacity: 0.8;">Excel-kompatible CSV-Datei mit Artikeln unter Mindestbestand.</p>
+                    </div>
+                    <button class="btn btn-warning" style="width: auto; padding: 14px 22px; margin-bottom: 0;" onclick="exportLowStockExcel()">📥 Excel-Bestellliste</button>
+                </div>
+
+                <div class="card">
+                    <h3>Neuen Artikel zum Lager hinzufügen</h3>
+                    <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
+                        <div class="form-group"><label>Artikelname</label><input type="text" id="new-name" placeholder="z.B. Radler 0,33l"></div>
+                        <div class="form-group"><label>Kategorie</label>
+                            <select id="new-category" class="table-input" style="width: 100%; text-align: left; padding: 12px;">
+                                <option value="drink">Getränk</option>
+                                <option value="food">Speise / Verzehr</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Preis (€)</label><input type="number" id="new-price" step="0.50" value="2.50"></div>
+                        <div class="form-group"><label>Menge</label><input type="number" id="new-stock" value="50"></div>
+                        <div class="form-group"><label>Mindestbestand</label><input type="number" id="new-min" value="10"></div>
+                        <button class="btn btn-success" style="height: 48px;" onclick="addArticle()">Hinzufügen</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Lagerbestand & Preise direkt verwalten (inkl. Favoriten ⭐ & Kategorie)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Favorit</th>
+                                <th>Artikel</th>
+                                <th>Kategorie</th>
+                                <th>Preis (€)</th>
+                                <th>Bestand (Stk.)</th>
+                                <th>Min.-Bestand</th>
+                                <th>Status</th>
+                                <th>Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub-Tab 5: Einstellungen & Passwörter ändern (Nur Vorstand) -->
+            <div id="sub-settings" class="sub-content">
+                <div class="card" style="border-left: 4px solid var(--primary);">
+            <h3>⚙️ Passwörter für den Inhaber-Bereich anpassen</h3>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 15px;">Hier können Sie das Passwort für Mitglieder und Vorstand individuell ändern.</p>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>🔑 Mitglieder-Passwort (Eingeschränkte Rechte)</label>
+                <input type="text" id="setting-pw-member" class="table-input" style="width: 100%; text-align: left; padding: 12px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>👑 Vorstand-Passwort (Volle Admin-Rechte)</label>
+                <input type="text" id="setting-pw-board" class="table-input" style="width: 100%; text-align: left; padding: 12px;">
+            </div>
+
+            <button class="btn btn-success" style="width: auto; padding: 12px 24px;" onclick="saveNewPasswords()">Passwörter speichern</button>
         </div>
     </div>
 
-    <!-- TAB 4: LAGER & ARTIKEL -->
-    <div id="tab-stock" class="tab-content">
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: rgba(22, 160, 133, 0.1); border: 1px solid var(--secondary); flex-wrap: wrap; gap: 10px;">
-            <div>
-                <h3 style="margin-bottom: 3px;">📊 Automatische Nachbestell-Liste</h3>
-                <p style="font-size: 0.95rem; opacity: 0.8;">Excel-kompatible CSV-Datei mit Artikeln unter Mindestbestand.</p>
-            </div>
-            <button class="btn btn-warning" style="width: auto; padding: 14px 22px; margin-bottom: 0;" onclick="exportLowStockExcel()">📥 Excel-Bestellliste</button>
-        </div>
+</div>
+</div>
 
-        <div class="card">
-            <h3>Neuen Artikel zum Lager hinzufügen</h3>
-            <div class="form-row">
-                <div class="form-group"><label>Artikelname</label><input type="text" id="new-name" placeholder="z.B. Radler 0,33l"></div>
-                <div class="form-group"><label>Preis (€)</label><input type="number" id="new-price" step="0.50" value="2.50"></div>
-                <div class="form-group"><label>Menge</label><input type="number" id="new-stock" value="50"></div>
-                <div class="form-group"><label>Mindestbestand</label><input type="number" id="new-min" value="10"></div>
-                <button class="btn btn-success" style="height: 48px;" onclick="addArticle()">Hinzufügen</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Lagerbestand & Preise direkt verwalten (inkl. Favoriten ⭐)</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Favorit</th>
-                        <th>Artikel</th>
-                        <th>Preis (€)</th>
-                        <th>Bestand (Stk.)</th>
-                        <th>Min.-Bestand</th>
-                        <th>Status</th>
-                        <th>Aktion</th>
-                    </tr>
-                </thead>
-                <tbody id="stock-table-body"></tbody>
-            </table>
-        </div>
+<!-- TAB 3: BIERDECKEL -->
+<div id="tab-deckel" class="tab-content">
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Offene Deckel-Summe (Gesamt)</h3>
+        <div class="value" id="deckel-total-sum" style="color: var(--accent);">0,00 €</div>
     </div>
+    <div class="stat-card">
+        <h3>Personen mit offenen Schulden</h3>
+        <div class="value" id="deckel-total-debtors">0</div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h3 style="font-size: 1.1rem;">🍺 Übersicht aller Bierdeckel & Schnellzahlung</h3>
+        <input type="text" id="deckel-search-input" class="table-input" style="width: 240px; text-align: left; padding: 10px;" placeholder="Nach Person suchen..." onkeyup="renderDeckelTab()">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Mitglied / Inhaber</th>
+                <th>Offener Deckel (€)</th>
+                <th>Letzte Aktivität</th>
+                <th>Schnell-Aktion</th>
+            </tr>
+        </thead>
+        <tbody id="deckel-table-body"></tbody>
+    </table>
+</div>
+</div>
 </div>
 
 <!-- MODAL: BARBEZAHLT & RÜCKGELD -->
 <div class="modal-overlay" id="cash-modal">
-    <div class="modal-card">
-        <h3>💶 Barzahlung</h3>
-        <p style="font-size: 0.95rem; margin: 10px 0;">Zu zahlen: <strong id="modal-total-display" style="color:var(--secondary); font-size: 1.2rem;">0,00 €</strong></p>
-        <div class="cash-buttons">
-            <button class="cash-btn" onclick="setCashGiven(Exact)">Exakt</button>
-            <button class="cash-btn" onclick="setCashGiven(5)">5 €</button>
-            <button class="cash-btn" onclick="setCashGiven(10)">10 €</button>
-            <button class="cash-btn" onclick="setCashGiven(20)">20 €</button>
-            <button class="cash-btn" onclick="setCashGiven(50)">50 €</button>
-            <button class="cash-btn" onclick="setCashGiven(100)">100 €</button>
-        </div>
-        <div class="form-group" style="text-align: left; margin-bottom: 15px;">
-            <label>Gegebener Betrag (€)</label>
-            <input type="number" id="cash-given-input" step="0.50" oninput="calculateChange()" style="font-size: 1.2rem; text-align: center;">
-        </div>
-        <div style="font-size: 1.1rem; margin-bottom: 15px; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px;">
-            Rückgeld: <strong id="modal-change-display" style="color:var(--accent);">0,00 €</strong>
-        </div>
-        <button class="btn btn-success" onclick="finishDirectCash()">Zahlung abschließen</button>
-        <button class="btn" style="background:var(--border); color:var(--text-color); margin-top: 5px;" onclick="closeCashModal()">Abbrechen</button>
-    </div>
+<div class="modal-card">
+<h3>💶 Barzahlung</h3>
+<p style="font-size: 0.95rem; margin: 10px 0;">Zu zahlen: <strong id="modal-total-display" style="color:var(--secondary); font-size: 1.2rem;">0,00 €</strong></p>
+<div class="cash-buttons">
+    <button class="cash-btn" onclick="setCashGiven('exact')">Exakt</button>
+    <button class="cash-btn" onclick="setCashGiven(5)">5 €</button>
+    <button class="cash-btn" onclick="setCashGiven(10)">10 €</button>
+    <button class="cash-btn" onclick="setCashGiven(20)">20 €</button>
+    <button class="cash-btn" onclick="setCashGiven(50)">50 €</button>
+    <button class="cash-btn" onclick="setCashGiven(100)">100 €</button>
+</div>
+<div class="form-group" style="text-align: left; margin-bottom: 15px;">
+    <label>Gegebener Betrag (€)</label>
+    <input type="number" id="cash-given-input" step="0.50" oninput="calculateChange()" style="font-size: 1.2rem; text-align: center;">
+</div>
+<div style="font-size: 1.1rem; margin-bottom: 15px; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px;">
+    Rückgeld: <strong id="modal-change-display" style="color:var(--accent);">0,00 €</strong>
+</div>
+<button class="btn btn-success" onclick="finishDirectCash()">Zahlung abschließen</button>
+<button class="btn" style="background:var(--border); color:var(--text-color); margin-top: 5px;" onclick="closeCashModal()">Abbrechen</button>
+</div>
+</div>
+
+<!-- MODAL: NEUES MITGLIED -->
+<div class="modal-overlay" id="member-modal">
+<div class="modal-card">
+<h3>👤 Neues Mitglied hinzufügen</h3>
+<div class="form-group" style="text-align: left; margin: 15px 0;">
+    <label>Vollständiger Name</label>
+    <input type="text" id="new-member-name" class="table-input" style="width: 100%; text-align: left; padding: 12px;" placeholder="z.B. Lisa Müller">
+</div>
+<button class="btn btn-success" onclick="saveNewMember()">Mitglied anlegen</button>
+<button class="btn" style="background:var(--border); color:var(--text-color); margin-top: 5px;" onclick="closeNewMemberModal()">Abbrechen</button>
+</div>
 </div>
 
 <script>
@@ -492,308 +588,261 @@
     let manualCashBalance = parseFloat(localStorage.getItem('verein_manual_cash')) || 0.00;
     let recentBuyerIds = JSON.parse(localStorage.getItem('verein_recent_buyers')) || [];
     let currentTheme = localStorage.getItem('verein_theme') || 'light';
-    let expressMode = false;
     
-    let selectedMemberId = 2;
+    // Passwörter
+    let memberPassword = localStorage.getItem('verein_pw_member') || 'mitglied123';
+    let boardPassword = localStorage.getItem('verein_pw_board') || 'vorstand123';
+    let currentRole = null; // 'member' oder 'board' oder null
+
+    let currentMemberId = 1; // Default Barverkauf
     let cart = [];
+    let expressMode = false;
 
-    // Init Theme
-    document.body.setAttribute('data-theme', currentTheme);
-    document.getElementById('theme-toggle-btn').innerText = currentTheme === 'dark' ? '☀️ Tagmodus' : '🌙 Nachtmodus';
-
-    function toggleTheme() {
-        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    // Initialisierung beim Laden
+    window.onload = function() {
         document.body.setAttribute('data-theme', currentTheme);
-        localStorage.setItem('verein_theme', currentTheme);
-        document.getElementById('theme-toggle-btn').innerText = currentTheme === 'dark' ? '☀️ Tagmodus' : '🌙 Nachtmodus';
+        updateThemeButtonText();
+        renderPosMembers();
+        renderFavorites();
+        renderProducts();
+        renderCart();
+        renderRecentBuyers();
+        
+        // Passwörter in Settings vorbelegen
+        document.getElementById('setting-pw-member').value = memberPassword;
+        document.getElementById('setting-pw-board').value = boardPassword;
+    };
+
+    // --- NAVIGATION & TABS ---
+    function switchTab(tabId, event) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById('tab-' + tabId).classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+
+        if (tabId === 'deckel') {
+            renderDeckelTab();
+        } else if (tabId === 'members') {
+            if (currentRole) {
+                renderAdminContent();
+            }
+        }
+    }
+
+    function switchSubTab(subId, event) {
+        document.querySelectorAll('.sub-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById('sub-' + subId).classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+
+        if (subId === 'members-list') renderMembersTable();
+        if (subId === 'turnover-share') renderTurnoverShareTab();
+        if (subId === 'closing') renderClosingTab();
+        if (subId === 'stock') renderStockTable();
+    }
+
+    // --- AUTHENTIFIZIERUNG ---
+    function checkAdminLogin() {
+        const inputVal = document.getElementById('admin-password-input').value.trim();
+        if (inputVal === boardPassword) {
+            currentRole = 'board';
+            unlockAdminArea("Vorstand (Volle Rechte)");
+        } else if (inputVal === memberPassword) {
+            currentRole = 'member';
+            unlockAdminArea("Mitglied (Eingeschränkte Rechte)");
+        } else {
+            alertUser("Falsches Passwort! Bitte versuchen Sie es erneut.");
+        }
+    }
+
+    function unlockAdminArea(roleText) {
+        document.getElementById('admin-login-box').style.display = 'none';
+        document.getElementById('admin-content-box').style.display = 'block';
+        document.getElementById('auth-status-badge').style.display = 'block';
+        document.getElementById('auth-role-text').innerText = roleText;
+
+        // Rechte beschränken falls nur 'member'
+        if (currentRole === 'member') {
+            document.getElementById('sub-btn-turnover').style.display = 'none';
+            document.getElementById('sub-btn-closing').style.display = 'none';
+            document.getElementById('sub-btn-settings').style.display = 'none';
+            document.getElementById('action-btn-import').style.display = 'none';
+            document.getElementById('action-btn-reset').style.display = 'none';
+        } else {
+            document.getElementById('sub-btn-turnover').style.display = 'inline-block';
+            document.getElementById('sub-btn-closing').style.display = 'inline-block';
+            document.getElementById('sub-btn-settings').style.display = 'inline-block';
+            document.getElementById('action-btn-import').style.display = 'inline-flex';
+            document.getElementById('action-btn-reset').style.display = 'inline-block';
+        }
+
+        renderMembersTable();
+    }
+
+    function lockAdminTab() {
+        currentRole = null;
+        document.getElementById('admin-login-box').style.display = 'block';
+        document.getElementById('admin-content-box').style.display = 'none';
+        document.getElementById('auth-status-badge').style.display = 'none';
+        document.getElementById('admin-password-input').value = '';
+    }
+
+    function renderAdminContent() {
+        if (currentRole) {
+            renderMembersTable();
+        }
+    }
+
+    // --- POS KASSE LOGIK ---
+    function renderPosMembers() {
+        const listEl = document.getElementById('pos-member-list');
+        const searchVal = document.getElementById('member-search-input').value.toLowerCase();
+        
+        listEl.innerHTML = '';
+        members.filter(m => m.name.toLowerCase().includes(searchVal)).forEach(m => {
+            const div = document.createElement('div');
+            div.className = `member-item ${m.id === currentMemberId ? 'selected' : ''}`;
+            div.innerHTML = `<span>${m.name}</span> <span style="font-size:0.85rem; opacity:0.7;">${m.debt > 0 ? m.debt.toFixed(2) + ' €' : ''}</span>`;
+            div.onclick = () => selectMember(m.id);
+            listEl.appendChild(div);
+        });
+
+        updateActiveBuyerDisplay();
+    }
+
+    function filterMembersList() {
+        renderPosMembers();
+    }
+
+    function selectMember(id) {
+        currentMemberId = id;
+        renderPosMembers();
+        
+        // Zu Recent Buyers hinzufügen
+        if (!recentBuyerIds.includes(id)) {
+            recentBuyerIds.unshift(id);
+            if (recentBuyerIds.length > 5) recentBuyerIds.pop();
+            localStorage.setItem('verein_recent_buyers', JSON.stringify(recentBuyerIds));
+            renderRecentBuyers();
+        }
+    }
+
+    function renderRecentBuyers() {
+        const container = document.getElementById('recent-buyers-container');
+        container.innerHTML = '';
+        recentBuyerIds.forEach(id => {
+            const m = members.find(item => item.id === id);
+            if (m) {
+                const badge = document.createElement('span');
+                badge.className = 'recent-badge';
+                badge.innerText = m.name;
+                badge.onclick = () => selectMember(m.id);
+                container.appendChild(badge);
+            }
+        });
+    }
+
+    function updateActiveBuyerDisplay() {
+        const m = members.find(item => item.id === currentMemberId);
+        const display = document.getElementById('active-buyer-display');
+        const payDebtSection = document.getElementById('pay-debt-section');
+        const payDebtAmount = document.getElementById('pay-debt-amount');
+
+        if (m) {
+            display.innerText = `Aktive Person: ${m.name}`;
+            if (m.debt > 0) {
+                payDebtSection.classList.add('visible');
+                payDebtAmount.innerText = m.debt.toFixed(2) + ' €';
+            } else {
+                payDebtSection.classList.remove('visible');
+            }
+        }
     }
 
     function toggleExpressMode() {
         expressMode = document.getElementById('express-mode-checkbox').checked;
     }
 
-    window.onbeforeunload = function (e) {
-        if (cart.length > 0) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    };
-
-    function saveData() {
-        localStorage.setItem('verein_products', JSON.stringify(products));
-        localStorage.setItem('verein_members', JSON.stringify(members));
-        localStorage.setItem('verein_transactions', JSON.stringify(transactions));
-        localStorage.setItem('verein_manual_cash', manualCashBalance);
-        localStorage.setItem('verein_recent_buyers', JSON.stringify(recentBuyerIds));
-    }
-
-    function exportBackupJson() {
-        let backupData = { products, members, transactions, manualCashBalance, recentBuyerIds, exportDate: new Date().toISOString() };
-        let blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `verein_kasse_backup_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.json`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function importBackupJson(event) {
-        let file = event.target.files[0];
-        if (!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let data = JSON.parse(e.target.result);
-                if (data.products && data.members) {
-                    products = data.products;
-                    members = data.members;
-                    transactions = data.transactions || [];
-                    manualCashBalance = data.manualCashBalance || 0;
-                    recentBuyerIds = data.recentBuyerIds || [];
-                    saveData();
-                    renderPOS();
-                    alert("Backup erfolgreich eingespielt!");
-                } else { alert("Ungültige Backup-Datei."); }
-            } catch(err) { alert("Fehler beim Lesen der JSON-Datei."); }
-        };
-        reader.readAsText(file);
-    }
-
-    function switchTab(tabId, event) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        
-        document.getElementById('tab-' + tabId).classList.add('active');
-        if (event && event.currentTarget) { event.currentTarget.classList.add('active'); }
-
-        if(tabId === 'pos') renderPOS();
-        if(tabId === 'members') renderMembersTab();
-        if(tabId === 'closing') renderClosingTab();
-        if(tabId === 'stock') renderStock();
-    }
-
-    function switchSubTab(subId, event) {
-        document.querySelectorAll('#tab-members .sub-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('#tab-members .sub-tab-btn').forEach(el => el.classList.remove('active'));
-
-        document.getElementById('sub-' + subId).classList.add('active');
-        if (event && event.currentTarget) { event.currentTarget.classList.add('active'); }
-
-        if (subId === 'members-list') renderMembersTab();
-        if (subId === 'turnover-share') renderTurnoverShareTab();
-    }
-
-    function renderPOS() {
-        renderMemberList();
-        renderRecentBuyers();
-        renderFavorites();
-        renderProductGrids();
-        renderCart();
-        updateActiveBuyerDisplay();
-        updateLivePreview();
-    }
-
-    function renderRecentBuyers() {
-        let container = document.getElementById('recent-buyers-container');
-        container.innerHTML = '';
-        if (recentBuyerIds.length === 0) return;
-
-        container.innerHTML = '<span style="font-size:0.75rem; opacity:0.6; width:100%; margin-bottom:2px;">Letzte Käufer:</span>';
-        recentBuyerIds.forEach(id => {
-            let m = members.find(item => item.id === id);
-            if (m) { container.innerHTML += `<button class="recent-badge" onclick="selectMember(${m.id})">${m.name}</button>`; }
-        });
-    }
-
-    function trackRecentBuyer(id) {
-        recentBuyerIds = recentBuyerIds.filter(item => item !== id);
-        recentBuyerIds.unshift(id);
-        if (recentBuyerIds.length > 4) recentBuyerIds.pop();
-        saveData();
-    }
-
     function renderFavorites() {
-        let container = document.getElementById('favorites-container');
+        const container = document.getElementById('favorites-container');
         container.innerHTML = '';
-        
-        let favoriteProducts = products.filter(p => p.favorite);
-        if(favoriteProducts.length === 0) {
-            container.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Keine Favoriten gewählt (im Tab "Lager & Artikel" einstellbar)</span>';
-            return;
-        }
-
-        favoriteProducts.forEach(p => {
-            let isOut = p.stock <= 0;
-            container.innerHTML += `<button class="favorite-btn ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : `handleProductClick(${p.id})`}">⭐ ${p.name} (${p.price.toFixed(2)}€)</button>`;
+        products.filter(p => p.favorite).forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = `favorite-btn ${p.stock <= 0 ? 'out-of-stock' : ''}`;
+            btn.innerText = `${p.name} (${p.price.toFixed(2)} €)`;
+            btn.onclick = () => addToCart(p.id);
+            container.appendChild(btn);
         });
     }
 
-    function renderMemberList() {
-        const listEl = document.getElementById('pos-member-list');
-        const filter = document.getElementById('member-search-input').value.toLowerCase();
-        listEl.innerHTML = '';
-
-        let filtered = members.filter(m => m.name.toLowerCase().includes(filter));
-        filtered.forEach(m => {
-            let isSelected = m.id === selectedMemberId;
-            listEl.innerHTML += `
-                <div class="member-item ${isSelected ? 'selected' : ''}" onclick="selectMember(${m.id})">
-                    <span>${m.name}</span>
-                    <span class="member-debt" style="color:var(--accent);">${m.debt > 0 ? m.debt.toFixed(2) + ' €' : ''}</span>
-                </div>
-            `;
-        });
-    }
-
-    function selectMember(id) {
-        selectedMemberId = id;
-        renderMemberList();
-        updateActiveBuyerDisplay();
-    }
-
-    function updateActiveBuyerDisplay() {
-        let m = members.find(item => item.id === selectedMemberId);
-        let display = document.getElementById('active-buyer-display');
-        let paySection = document.getElementById('pay-debt-section');
-        let payAmount = document.getElementById('pay-debt-amount');
-
-        if(m) {
-            display.innerHTML = `Ausgewählt: <b>${m.name}</b> (Deckel: <span style="color:var(--accent);">${m.debt.toFixed(2)} €</span>)`;
-            if(m.debt > 0) {
-                payAmount.innerText = m.debt.toFixed(2) + ' €';
-                paySection.classList.add('visible');
-            } else { paySection.classList.remove('visible'); }
-        } else {
-            display.innerHTML = `Keine Person gewählt`;
-            paySection.classList.remove('visible');
-        }
-    }
-
-    function updateLivePreview() {
-        let cashSum = 0;
-        let debtSum = 0;
-        transactions.forEach(t => {
-            if(t.type === 'Barbezahlt' || t.type === 'Deckel-Bezahlt') cashSum += t.total;
-            else if(t.type === 'Deckel') debtSum += t.total;
-        });
-
-        document.getElementById('live-cash-total').innerText = cashSum.toFixed(2) + ' €';
-        document.getElementById('live-debt-total').innerText = debtSum.toFixed(2) + ' €';
-        document.getElementById('live-overall-total').innerText = (cashSum + debtSum).toFixed(2) + ' €';
-    }
-
-    function payOffDebtCurrentMember() {
-        let m = members.find(item => item.id === selectedMemberId);
-        if(!m || m.debt <= 0) return;
-
-        if(confirm(`Möchte "${m.name}" den offenen Deckel von ${m.debt.toFixed(2)} € jetzt bar begleichen?`)) {
-            let paidAmount = m.debt;
-            m.debt = 0;
-            m.lastActive = new Date().toLocaleString('de-DE');
-
-            transactions.unshift({
-                id: Date.now(),
-                date: m.lastActive,
-                member: m.name,
-                items: [{ name: 'Deckel-Begleichung (Ausgleich)', qty: 1, price: paidAmount }],
-                total: paidAmount,
-                type: 'Deckel-Bezahlt'
-            });
-
-            trackRecentBuyer(m.id);
-            saveData();
-            renderPOS();
-            alert(`Deckel von "${m.name}" über ${paidAmount.toFixed(2)} € beglichen!`);
-        }
-    }
-
-    function renderProductGrids() {
+    function renderProducts() {
         const drinksGrid = document.getElementById('pos-drinks-grid');
         const foodGrid = document.getElementById('pos-food-grid');
+        
         drinksGrid.innerHTML = '';
         foodGrid.innerHTML = '';
 
         products.forEach(p => {
-            let isOut = p.stock <= 0;
-            let cardHtml = `
-                <div class="product-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : `handleProductClick(${p.id})`}">
-                    <div>
-                        <div class="product-name">${p.name}</div>
-                        <div class="product-price">${p.price.toFixed(2)} €</div>
-                    </div>
-                    <div class="product-stock">Lager: ${p.stock}</div>
-                </div>
+            const card = document.createElement('div');
+            card.className = `product-card ${p.stock <= 0 ? 'out-of-stock' : ''}`;
+            card.innerHTML = `
+                <div class="product-name">${p.name}</div>
+                <div class="product-price">${p.price.toFixed(2)} €</div>
+                <div class="product-stock">Bestand: ${p.stock}</div>
             `;
+            if (p.stock > 0) {
+                card.onclick = () => addToCart(p.id);
+            }
 
-            if (p.category === 'food' || (!p.category && (p.name.toLowerCase().includes('bratwurst') || p.name.toLowerCase().includes('brezel') || p.name.toLowerCase().includes('essen')))) {
-                foodGrid.innerHTML += cardHtml;
+            if (p.category === 'drink') {
+                drinksGrid.appendChild(card);
             } else {
-                drinksGrid.innerHTML += cardHtml;
+                foodGrid.appendChild(card);
             }
         });
-
-        if (drinksGrid.innerHTML === '') drinksGrid.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Keine Getränke vorhanden</span>';
-        if (foodGrid.innerHTML === '') foodGrid.innerHTML = '<span style="font-size:0.8rem; opacity:0.5;">Kein Verzehr / Speisen vorhanden</span>';
     }
 
-    function handleProductClick(id) {
+    function addToCart(productId) {
+        const p = products.find(item => item.id === productId);
+        if (!p || p.stock <= 0) return;
+
+        const cartItem = cart.find(item => item.productId === productId);
+        if (cartItem) {
+            if (cartItem.qty < p.stock) {
+                cartItem.qty++;
+            } else {
+                alertUser("Lagerbestand reicht nicht aus!");
+                return;
+            }
+        } else {
+            cart.push({ productId: p.id, name: p.name, price: p.price, qty: 1 });
+        }
+
+        renderCart();
+
         if (expressMode) {
-            addToCart(id);
-            bookToDeckel();
-        } else {
-            addToCart(id);
+            bookToDeckel(true); // Direkt auf Deckel im Expressmodus
         }
     }
 
-    function addToCart(id) {
-        let product = products.find(p => p.id === id);
-        if(!product || product.stock <= 0) return;
-
-        let cartItem = cart.find(item => item.id === id);
-        if(cartItem) {
-            if(cartItem.qty < product.stock) { cartItem.qty++; }
-            else { alert("Nicht genügend Bestand auf Lager!"); }
-        } else {
-            cart.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
-        }
-        renderCart();
-    }
-
-    function changeCartQty(id, delta) {
-        let cartItem = cart.find(item => item.id === id);
-        if(!cartItem) return;
-
-        let product = products.find(p => p.id === id);
-        cartItem.qty += delta;
-        if(cartItem.qty > product.stock) {
-            cartItem.qty = product.stock;
-            alert("Maximaler Bestand erreicht.");
-        }
-        if(cartItem.qty <= 0) {
-            cart = cart.filter(item => item.id !== id);
-        }
-        renderCart();
-    }
-
-    function promptCartQty(id) {
-        let cartItem = cart.find(item => item.id === id);
-        let product = products.find(p => p.id === id);
-        if(!cartItem) return;
-
-        let newQty = prompt(`Menge für "${cartItem.name}" anpassen:`, cartItem.qty);
-        if(newQty !== null) {
-            let parsed = parseInt(newQty);
-            if(!isNaN(parsed) && parsed > 0) {
-                if(parsed <= product.stock) {
-                    cartItem.qty = parsed;
-                } else {
-                    alert("Achtung: Mehr als der aktuelle Lagerbestand!");
-                    cartItem.qty = product.stock;
+    function changeCartQty(productId, delta) {
+        const itemIndex = cart.findIndex(item => item.productId === productId);
+        if (itemIndex > -1) {
+            cart[itemIndex].qty += delta;
+            if (cart[itemIndex].qty <= 0) {
+                cart.splice(itemIndex, 1);
+            } else {
+                const p = products.find(prod => prod.id === productId);
+                if (p && cart[itemIndex].qty > p.stock) {
+                    cart[itemIndex].qty = p.stock;
+                    alertUser("Maximaler Lagerbestand erreicht.");
                 }
-            } else if(parsed === 0) {
-                cart = cart.filter(item => item.id !== id);
             }
             renderCart();
         }
@@ -803,33 +852,34 @@
         const container = document.getElementById('cart-items-container');
         const totalEl = document.getElementById('cart-total-price');
         
-        if(cart.length === 0) {
+        container.innerHTML = '';
+        if (cart.length === 0) {
             container.innerHTML = '<p style="opacity: 0.5; text-align: center; margin-top: 15px; font-size: 0.95rem;">Warenkorb ist leer</p>';
             totalEl.innerText = '0,00 €';
             return;
         }
 
-        container.innerHTML = '';
         let total = 0;
         cart.forEach(item => {
-            let itemTotal = item.price * item.qty;
+            const itemTotal = item.price * item.qty;
             total += itemTotal;
-            container.innerHTML += `
-                <div class="cart-item">
-                    <div>
-                        <strong>${item.name}</strong><br>
-                        <small class="cart-item-qty" onclick="promptCartQty(${item.id})" title="Menge direkt ändern">${item.qty}x (${item.price.toFixed(2)} €) ✏️</small>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span>${itemTotal.toFixed(2)} €</span>
-                        <div class="cart-item-controls">
-                            <button onclick="changeCartQty(${item.id}, -1)">-</button>
-                            <button onclick="changeCartQty(${item.id}, 1)">+</button>
-                        </div>
-                    </div>
+
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight: bold;">${item.name}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7;">${item.qty} x ${item.price.toFixed(2)} € = ${itemTotal.toFixed(2)} €</div>
+                </div>
+                <div class="cart-item-controls" style="display: flex; gap: 4px; align-items: center;">
+                    <button onclick="changeCartQty(${item.productId}, -1)">-</button>
+                    <span class="cart-item-qty">${item.qty}</span>
+                    <button onclick="changeCartQty(${item.productId}, 1)">+</button>
                 </div>
             `;
+            container.appendChild(div);
         });
+
         totalEl.innerText = total.toFixed(2) + ' €';
     }
 
@@ -837,138 +887,371 @@
         return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     }
 
-    function bookToDeckel() {
-        if(cart.length === 0) return alert("Der Warenkorb ist leer!");
-        let member = members.find(m => m.id === selectedMemberId);
-        if(!member) return alert("Bitte Person wählen.");
+    // --- TRANSAKTIONEN BUCHEN ---
+    function bookToDeckel(isExpress = false) {
+        if (cart.length === 0) {
+            if (!isExpress) alertUser("Warenkorb ist leer!");
+            return;
+        }
 
-        let totalAmount = getCartTotal();
+        const member = members.find(m => m.id === currentMemberId);
+        if (!member) return;
 
-        cart.forEach(ci => {
-            let prod = products.find(p => p.id === ci.id);
-            if(prod) prod.stock -= ci.qty;
+        const total = getCartTotal();
+        member.debt += total;
+        member.lastActive = new Date().toLocaleString();
+
+        // Lagerbestand abziehen
+        cart.forEach(item => {
+            const p = products.find(prod => prod.id === item.productId);
+            if (p) p.stock -= item.qty;
         });
 
-        member.debt += totalAmount;
-        member.lastActive = new Date().toLocaleString('de-DE');
-
+        // Transaktion speichern
         transactions.unshift({
             id: Date.now(),
-            date: member.lastActive,
-            member: member.name,
-            items: [...cart],
-            total: totalAmount,
-            type: 'Deckel'
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            dateStr: new Date().toLocaleDateString(),
+            person: member.name,
+            type: 'Auf Deckel',
+            details: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+            amount: total
         });
 
-        trackRecentBuyer(member.id);
-        saveData();
+        saveAllData();
         cart = [];
-        renderPOS();
+        renderCart();
+        renderProducts();
+        renderPosMembers();
+        updateActiveBuyerDisplay();
+
+        if (!isExpress) {
+            alertUser(`Erfolgreich ${total.toFixed(2)} € auf den Deckel von ${member.name} geschrieben!`);
+        }
     }
 
-    let currentCartTotalForModal = 0;
-
+    let cashModalTotal = 0;
     function openCashModal() {
-        if(cart.length === 0) return alert("Der Warenkorb ist leer!");
-        currentCartTotalForModal = getCartTotal();
-        document.getElementById('modal-total-display').innerText = currentCartTotalForModal.toFixed(2) + ' €';
-        document.getElementById('cash-given-input').value = currentCartTotalForModal.toFixed(2);
-        document.getElementById('modal-change-display').innerText = '0,00 €';
-        document.getElementById('cash-modal').classList.add('active');
-        document.getElementById('cash-given-input').focus();
-        document.getElementById('cash-given-input').select();
-    }
-
-    const Exact = 'EXACT';
-    function setCashGiven(val) {
-        let input = document.getElementById('cash-given-input');
-        if (val === Exact) {
-            input.value = currentCartTotalForModal.toFixed(2);
-        } else {
-            if (val >= currentCartTotalForModal) {
-                input.value = val.toFixed(2);
-            } else {
-                input.value = currentCartTotalForModal.toFixed(2);
-            }
+        if (cart.length === 0) {
+            alertUser("Warenkorb ist leer!");
+            return;
         }
+        cashModalTotal = getCartTotal();
+        document.getElementById('modal-total-display').innerText = cashModalTotal.toFixed(2) + ' €';
+        document.getElementById('cash-given-input').value = cashModalTotal.toFixed(2);
         calculateChange();
-    }
-
-    function calculateChange() {
-        let given = parseFloat(document.getElementById('cash-given-input').value) || 0;
-        let change = given - currentCartTotalForModal;
-        let changeEl = document.getElementById('modal-change-display');
-        if (change >= 0) {
-            changeEl.innerText = change.toFixed(2) + ' €';
-            changeEl.style.color = 'var(--secondary)';
-        } else {
-            changeEl.innerText = 'Betrag zu gering!';
-            changeEl.style.color = 'var(--accent)';
-        }
+        document.getElementById('cash-modal').classList.add('active');
     }
 
     function closeCashModal() {
         document.getElementById('cash-modal').classList.remove('active');
     }
 
+    function setCashGiven(val) {
+        if (val === 'exact') {
+            document.getElementById('cash-given-input').value = cashModalTotal.toFixed(2);
+        } else {
+            document.getElementById('cash-given-input').value = val.toFixed(2);
+        }
+        calculateChange();
+    }
+
+    function calculateChange() {
+        const given = parseFloat(document.getElementById('cash-given-input').value) || 0;
+        const change = given - cashModalTotal;
+        document.getElementById('modal-change-display').innerText = change >= 0 ? change.toFixed(2) + ' €' : 'Zu wenig Geld!';
+    }
+
     function finishDirectCash() {
-        let given = parseFloat(document.getElementById('cash-given-input').value) || 0;
-        if (given < currentCartTotalForModal) {
-            return alert("Der gegebene Betrag ist kleiner als die Gesamtsumme!");
+        const given = parseFloat(document.getElementById('cash-given-input').value) || 0;
+        if (given < cashModalTotal) {
+            alertUser("Der gegebene Betrag ist kleiner als die Summe!");
+            return;
         }
 
-        let member = members.find(m => m.id === selectedMemberId);
-        let memberName = member ? member.name : "Barverkauf";
-        let totalAmount = currentCartTotalForModal;
+        const member = members.find(m => m.id === currentMemberId);
+        const total = cashModalTotal;
 
-        cart.forEach(ci => {
-            let prod = products.find(p => p.id === ci.id);
-            if(prod) prod.stock -= ci.qty;
+        // Lagerbestand abziehen
+        cart.forEach(item => {
+            const p = products.find(prod => prod.id === item.productId);
+            if (p) p.stock -= item.qty;
         });
+
+        // Transaktion speichern
+        transactions.unshift({
+            id: Date.now(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            dateStr: new Date().toLocaleDateString(),
+            person: member ? member.name : 'Barverkauf',
+            type: 'Bar bezahlt',
+            details: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+            amount: total
+        });
+
+        manualCashBalance += total;
+        saveAllData();
+
+        closeCashModal();
+        cart = [];
+        renderCart();
+        renderProducts();
+        renderPosMembers();
+        updateActiveBuyerDisplay();
+        alertUser(`Barzahlung erfolgreich abgeschlossen! Rückgeld: ${(given - total).toFixed(2)} €`);
+    }
+
+    function payOffDebtCurrentMember() {
+        const member = members.find(m => m.id === currentMemberId);
+        if (!member || member.debt <= 0) return;
+
+        const debtAmount = member.debt;
+        member.debt = 0;
+        member.lastActive = new Date().toLocaleString();
 
         transactions.unshift({
             id: Date.now(),
-            date: new Date().toLocaleString('de-DE'),
-            member: memberName,
-            items: [...cart],
-            total: totalAmount,
-            type: 'Barbezahlt'
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            dateStr: new Date().toLocaleDateString(),
+            person: member.name,
+            type: 'Deckel beglichen',
+            details: 'Offene Schulden bar bezahlt',
+            amount: debtAmount
         });
 
-        if (member) trackRecentBuyer(member.id);
-        saveData();
-        cart = [];
-        closeCashModal();
-        renderPOS();
+        manualCashBalance += debtAmount;
+        saveAllData();
+        renderPosMembers();
+        updateActiveBuyerDisplay();
+        renderMembersTable();
+        alertUser(`Deckel von ${member.name} (${debtAmount.toFixed(2)} €) wurde bar beglichen!`);
     }
 
-    function renderClosingTab() {
-        const tbody = document.getElementById('closing-transactions-body');
+    // --- BIERDECKEL TAB ---
+    function renderDeckelTab() {
+        const tbody = document.getElementById('deckel-table-body');
+        const searchVal = (document.getElementById('deckel-search-input').value || '').toLowerCase();
+        
         tbody.innerHTML = '';
+        let totalDebt = 0;
+        let debtorsCount = 0;
+
+        members.filter(m => m.name.toLowerCase().includes(searchVal)).forEach(m => {
+            if (m.debt > 0) {
+                totalDebt += m.debt;
+                debtorsCount++;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: bold;">${m.name}</td>
+                <td style="color: ${m.debt > 0 ? 'var(--accent)' : 'inherit'}; font-weight: bold;">${m.debt.toFixed(2)} €</td>
+                <td>${m.lastActive}</td>
+                <td>
+                    ${m.debt > 0 ? `<button class="btn btn-success" style="width: auto; padding: 6px 12px; font-size: 0.85rem; margin-bottom:0;" onclick="payOffDebtMember(${m.id})">Deckel bar begleichen</button>` : '<span style="opacity:0.5;">Ausgeglichen</span>'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('deckel-total-sum').innerText = totalDebt.toFixed(2) + ' €';
+        document.getElementById('deckel-total-debtors').innerText = debtorsCount;
+    }
+
+    function payOffDebtMember(memberId) {
+        const m = members.find(item => item.id === memberId);
+        if (!m || m.debt <= 0) return;
+
+        const amount = m.debt;
+        m.debt = 0;
+        m.lastActive = new Date().toLocaleString();
+
+        transactions.unshift({
+            id: Date.now(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            dateStr: new Date().toLocaleDateString(),
+            person: m.name,
+            type: 'Deckel beglichen',
+            details: 'Offene Schulden bar bezahlt',
+            amount: amount
+        });
+
+        manualCashBalance += amount;
+        saveAllData();
+        renderDeckelTab();
+        renderPosMembers();
+        alertUser(`Deckel von ${m.name} erfolgreich beglichen!`);
+    }
+
+    // --- MITGLIEDER VERWALTUNG ---
+    function renderMembersTable() {
+        const tbody = document.getElementById('members-table-body');
+        tbody.innerHTML = '';
+        
+        let totalDebt = 0;
+        members.forEach(m => {
+            totalDebt += m.debt;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="table-input" style="width:100%; text-align:left;" value="${m.name}" onchange="updateMemberName(${m.id}, this.value)"></td>
+                <td style="font-weight:bold; color:${m.debt > 0 ? 'var(--accent)' : 'inherit'};">${m.debt.toFixed(2)} €</td>
+                <td>${m.lastActive}</td>
+                <td>
+                    ${currentRole === 'board' ? `<button class="btn btn-danger" style="width:auto; padding:6px 10px; font-size:0.8rem; margin-bottom:0;" onclick="deleteMember(${m.id})">Löschen</button>` : '<span style="opacity:0.5;">Geschützt</span>'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('stat-total-debt').innerText = totalDebt.toFixed(2) + ' €';
+        document.getElementById('stat-total-members').innerText = members.length;
+    }
+
+    function updateMemberName(id, newName) {
+        const m = members.find(item => item.id === id);
+        if (m && newName.trim() !== '') {
+            m.name = newName.trim();
+            saveAllData();
+            renderPosMembers();
+        }
+    }
+
+    function openNewMemberModal() {
+        document.getElementById('new-member-name').value = '';
+        document.getElementById('member-modal').classList.add('active');
+    }
+
+    function closeNewMemberModal() {
+        document.getElementById('member-modal').classList.remove('active');
+    }
+
+    function saveNewMember() {
+        const nameVal = document.getElementById('new-member-name').value.trim();
+        if (!nameVal) {
+            alertUser("Bitte geben Sie einen Namen ein.");
+            return;
+        }
+
+        const newId = members.length > 0 ? Math.max(...members.map(m => m.id)) + 1 : 1;
+        members.push({ id: newId, name: nameVal, debt: 0, lastActive: '-' });
+        saveAllData();
+        closeNewMemberModal();
+        renderMembersTable();
+        renderPosMembers();
+        alertUser(`Mitglied ${nameVal} erfolgreich hinzugefügt!`);
+    }
+
+    function deleteMember(id) {
+        if (members.length <= 1) {
+            alertUser("Es muss mindestens ein Mitglied vorhanden sein.");
+            return;
+        }
+        members = members.filter(m => m.id !== id);
+        saveAllData();
+        renderMembersTable();
+        renderPosMembers();
+    }
+
+    // --- PROZENTUALE GETRÄNKE-AUSWERTUNG ---
+    function renderTurnoverShareTab() {
+        const percentage = parseFloat(document.getElementById('percentage-input').value) || 0;
+        document.querySelectorAll('.display-percent-label').forEach(el => el.innerText = percentage);
+
+        let totalDrinksRevenue = 0;
+        let totalFoodRevenue = 0;
+
+        const drinkTbody = document.getElementById('turnover-share-table-body');
+        const foodTbody = document.getElementById('turnover-share-food-table-body');
+        
+        drinkTbody.innerHTML = '';
+        foodTbody.innerHTML = '';
+
+        // Berechne verkaufte Mengen aus Transaktionen
+        let soldCounts = {};
+        transactions.forEach(t => {
+            // Vereinfachte Schätzung anhand Details oder wir zählen pro Produkt
+            // Für präzise Auswertung können wir Artikel-Namen matchen
+        });
+
+        // Alternativ über aktuelle Bestandsdifferenzen oder Standard-Summen anzeigen
+        products.forEach(p => {
+            // Wir summieren alle Verkäufe dieses Artikels aus den Transaktionen
+            let soldQty = 0;
+            transactions.forEach(t => {
+                if (t.details && t.details.includes(p.name)) {
+                    // Extrahiere Menge falls möglich oder parse string
+                    const parts = t.details.split(', ');
+                    parts.forEach(part => {
+                        if (part.includes(p.name)) {
+                            const qtyVal = parseInt(part.split('x ')[0]) || 1;
+                            soldQty += qtyVal;
+                        }
+                    });
+                }
+            });
+
+            const revenue = soldQty * p.price;
+            if (p.category === 'drink') {
+                totalDrinksRevenue += revenue;
+                const singleShareVal = p.price * (percentage / 100);
+                const totalShareVal = revenue * (percentage / 100);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.name}</td>
+                    <td>${soldQty} Stk.</td>
+                    <td>${p.price.toFixed(2)} €</td>
+                    <td>${revenue.toFixed(2)} €</td>
+                    <td>${singleShareVal.toFixed(2)} €</td>
+                    <td style="font-weight:bold; color:var(--secondary);">${totalShareVal.toFixed(2)} €</td>
+                `;
+                drinkTbody.appendChild(tr);
+            } else {
+                totalFoodRevenue += revenue;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.name}</td>
+                    <td>${soldQty} Stk.</td>
+                    <td>${p.price.toFixed(2)} €</td>
+                    <td style="font-weight:bold; color:#3498db;">${revenue.toFixed(2)} €</td>
+                `;
+                foodTbody.appendChild(tr);
+            }
+        });
+
+        const totalPercentageVal = totalDrinksRevenue * (percentage / 100);
+        const combinedVal = totalPercentageVal + totalFoodRevenue;
+
+        document.getElementById('share-total-drinks').innerText = totalDrinksRevenue.toFixed(2) + ' €';
+        document.getElementById('share-total-percentage-val').innerText = totalPercentageVal.toFixed(2) + ' €';
+        document.getElementById('share-total-food-val').innerText = totalFoodRevenue.toFixed(2) + ' €';
+        document.getElementById('share-total-combined-val').innerText = combinedVal.toFixed(2) + ' €';
+    }
+
+    // --- TAGESABSCHLUSS ---
+    function renderClosingTab() {
         let cashSum = 0;
         let debtSum = 0;
 
-        if(transactions.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; opacity: 0.6;">Heute keine Transaktionen.</td></tr>`;
-        }
+        const tbody = document.getElementById('closing-transactions-body');
+        tbody.innerHTML = '';
 
         transactions.forEach(t => {
-            if(t.type === 'Barbezahlt' || t.type === 'Deckel-Bezahlt') cashSum += t.total;
-            if(t.type === 'Deckel') debtSum += t.total;
+            if (t.type === 'Bar bezahlt' || t.type === 'Deckel beglichen') {
+                cashSum += t.amount;
+            } else if (t.type === 'Auf Deckel') {
+                debtSum += t.amount;
+            }
 
-            let itemDesc = t.items.map(i => `${i.qty}x ${i.name}`).join(', ');
-            let badgeClass = t.type === 'Barbezahlt' ? 'badge-green' : (t.type === 'Deckel-Bezahlt' ? 'badge-green' : 'badge-yellow');
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>${t.date}</td>
-                    <td><strong>${t.member}</strong></td>
-                    <td><span class="badge ${badgeClass}">${t.type}</span></td>
-                    <td><small>${itemDesc}</small></td>
-                    <td><strong>${t.total.toFixed(2)} €</strong></td>
-                </tr>
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.time} (${t.dateStr})</td>
+                <td>${t.person}</td>
+                <td><span class="badge ${t.type === 'Bar bezahlt' ? 'badge-green' : (t.type === 'Auf Deckel' ? 'badge-red' : 'badge-yellow')}">${t.type}</span></td>
+                <td>${t.details}</td>
+                <td style="font-weight:bold;">${t.amount.toFixed(2)} €</td>
             `;
+            tbody.appendChild(tr);
         });
 
         document.getElementById('closing-cash-sum').innerText = cashSum.toFixed(2) + ' €';
@@ -977,367 +1260,233 @@
         document.getElementById('manual-cash-input').value = manualCashBalance.toFixed(2);
     }
 
-    function updateManualCash(val) {
-        let num = parseFloat(val);
-        if(!isNaN(num)) {
-            manualCashBalance = num;
-            saveData();
-        }
-    }
-
     function copyTotalToCash() {
         let cashSum = 0;
-        let debtSum = 0;
         transactions.forEach(t => {
-            if(t.type === 'Barbezahlt' || t.type === 'Deckel-Bezahlt') cashSum += t.total;
-            if(t.type === 'Deckel') debtSum += t.total;
-        });
-        let totalSum = cashSum + debtSum;
-
-        manualCashBalance += totalSum; 
-        document.getElementById('manual-cash-input').value = manualCashBalance.toFixed(2);
-        saveData();
-        alert(`Gesamtumsatz (${totalSum.toFixed(2)} €) wurde zum Kassenbestand addiert!\nNeuer Kassenbestand: ${manualCashBalance.toFixed(2)} €`);
-    }
-
-    function exportClosingCsv() {
-        let itemQuantities = {};
-        let cashSum = 0;
-        let debtSum = 0;
-
-        transactions.forEach(t => {
-            if(t.type === 'Barbezahlt' || t.type === 'Deckel-Bezahlt') cashSum += t.total;
-            if(t.type === 'Deckel') debtSum += t.total;
-            if (t.items) {
-                t.items.forEach(i => {
-                    if (i.name.includes('Deckel-Begleichung')) return;
-                    itemQuantities[i.name] = (itemQuantities[i.name] || 0) + i.qty;
-                });
+            if (t.type === 'Bar bezahlt' || t.type === 'Deckel beglichen') {
+                cashSum += t.amount;
             }
         });
+        manualCashBalance += cashSum;
+        saveAllData();
+        renderClosingTab();
+        alertUser("Bargeld-Einnahmen zum Kassenbestand addiert!");
+    }
 
-        let totalTurnover = cashSum + debtSum;
-        let csvContent = "\uFEFFKassenbericht\n";
-        csvContent += `Gesamt-Tagesumsatz;${totalTurnover.toFixed(2).replace('.', ',')} €\n`;
-        csvContent += `Aktueller Kassenbestand;${manualCashBalance.toFixed(2).replace('.', ',')} €\n\n`;
-        csvContent += `Verkaufte Artikel;Menge\n`;
-        
-        for (let [name, qty] of Object.entries(itemQuantities)) {
-            csvContent += `"${name}";${qty}\n`;
-        }
-
-        let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Kassenbericht_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    function updateManualCash(val) {
+        manualCashBalance = parseFloat(val) || 0;
+        saveAllData();
     }
 
     function resetDayTransactions() {
-        let keepCash = confirm("Möchten Sie den aktuellen Kassenbestand BEHALTEN?\n\n(Klicken Sie auf 'Abbrechen', wenn der Kassenbestand auf 0,00 € zurückgesetzt werden soll)");
-        let msg = keepCash ? "Tagesliste wird geleert, Kassenbestand bleibt erhalten." : "Tagesliste wird geleert und Kassenbestand wird auf 0,00 € gesetzt.";
-        
-        if(confirm(msg + "\n\nOffene Bierdeckel der Mitglieder bleiben bestehen.")) {
+        if (confirm("Möchten Sie wirklich alle heutigen Transaktionen zurücksetzen?")) {
             transactions = [];
-            if (!keepCash) { manualCashBalance = 0.00; }
-            saveData();
+            saveAllData();
             renderClosingTab();
-            alert("Tageskasse wurde zurückgesetzt.");
+            alertUser("Transaktionen zurückgesetzt.");
         }
     }
 
-    function renderStock() {
-        const tbody = document.getElementById('stock-table-body');
-        tbody.innerHTML = '';
-        products.forEach(p => {
-            let badge = '<span class="badge badge-green">Normal</span>';
-            if(p.stock <= 0) badge = '<span class="badge badge-red">Ausverkauft</span>';
-            else if(p.stock <= p.minStock) badge = '<span class="badge badge-yellow">Gering</span>';
-
-            let isDrink = p.category === 'drink' || (!p.category && !p.name.toLowerCase().includes('bratwurst') && !p.name.toLowerCase().includes('brezel') && !p.name.toLowerCase().includes('essen'));
-
-            tbody.innerHTML += `
-                <tr>
-                    <td style="text-align: center;">
-                        <button onclick="toggleProductFavorite(${p.id})" style="background: none; border: none; font-size: 1.3rem; cursor: pointer;" title="Als Favorit ein-/ausschalten">
-                            ${p.favorite ? '⭐' : '☆'}
-                        </button>
-                    </td>
-                    <td>
-                        <input type="text" class="table-input" style="width: 140px; text-align: left;" value="${p.name}" onchange="updateProductText(${p.id}, 'name', this.value)">
-                        <br><small style="opacity:0.6;">${isDrink ? 'Getränk' : 'Speise'}</small>
-                    </td>
-                    <td><input type="number" class="table-input" step="0.50" value="${p.price.toFixed(2)}" onchange="updateProductField(${p.id}, 'price', this.value)"></td>
-                    <td><input type="number" class="table-input" value="${p.stock}" onchange="updateProductField(${p.id}, 'stock', this.value)"></td>
-                    <td><input type="number" class="table-input" value="${p.minStock}" onchange="updateProductField(${p.id}, 'minStock', this.value)"></td>
-                    <td>${badge}</td>
-                    <td>
-                        <button onclick="deleteArticle(${p.id})" style="padding: 6px 12px; background:var(--accent); color:white; border:none; border-radius:4px; cursor:pointer;">Löschen</button>
-                    </td>
-                </tr>
-            `;
+    function exportClosingCsv() {
+        let csvContent = "data:text/csv;charset=utf-8,Uhrzeit;Person;Typ;Details;Betrag\n";
+        transactions.forEach(t => {
+            csvContent += `${t.time} ${t.dateStr};${t.person};${t.type};${t.details};${t.amount.toFixed(2).replace('.', ',')}\n`;
         });
-    }
-
-    function toggleProductFavorite(id) {
-        let p = products.find(item => item.id === id);
-        if(!p) return;
-        p.favorite = !p.favorite;
-        saveData();
-        renderStock();
-    }
-
-    function updateProductText(id, field, value) {
-        let p = products.find(item => item.id === id);
-        if(!p || !value.trim()) return;
-        p[field] = value.trim();
-        if (field === 'name') {
-            p.category = (value.toLowerCase().includes('bratwurst') || value.toLowerCase().includes('brezel') || value.toLowerCase().includes('essen')) ? 'food' : 'drink';
-        }
-        saveData();
-    }
-
-    function updateProductField(id, field, value) {
-        let p = products.find(item => item.id === id);
-        if(!p) return;
-        let numVal = parseFloat(value);
-        if(isNaN(numVal) || numVal < 0) {
-            alert("Ungültiger Wert.");
-            renderStock();
-            return;
-        }
-        p[field] = numVal;
-        saveData();
-        renderStock();
-    }
-
-    function exportLowStockExcel() {
-        let lowStockItems = products.filter(p => p.stock <= p.minStock);
-        if(lowStockItems.length === 0) return alert("Kein Artikel unter Mindestbestand.");
-
-        let csvContent = "\uFEFFArtikel;Aktueller Bestand;Mindestbestand;Empfohlene Nachbestellmenge\n";
-        lowStockItems.forEach(p => {
-            let recommendedOrder = (p.minStock * 2) - p.stock;
-            csvContent += `"${p.name}";${p.stock};${p.minStock};${recommendedOrder}\n`;
-        });
-
-        let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Nachbestellliste.csv`);
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `kassenbericht_${new Date().toLocaleDateString()}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
+    // --- LAGER & ARTIKEL ---
+    function renderStockTable() {
+        const tbody = document.getElementById('stock-table-body');
+        tbody.innerHTML = '';
+
+        products.forEach(p => {
+            let statusBadge = '<span class="badge badge-green">Auf Lager</span>';
+            if (p.stock <= 0) {
+                statusBadge = '<span class="badge badge-red">Ausverkauft</span>';
+            } else if (p.stock <= p.minStock) {
+                statusBadge = '<span class="badge badge-yellow">Nachbestellen</span>';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align:center;"><input type="checkbox" ${p.favorite ? 'checked' : ''} onchange="toggleArticleFavorite(${p.id})"></td>
+                <td><input type="text" class="table-input" style="width:100%; text-align:left;" value="${p.name}" onchange="updateArticleField(${p.id}, 'name', this.value)"></td>
+                <td>
+                    <select class="table-input" style="width:100%; text-align:left; padding:8px;" onchange="updateArticleField(${p.id}, 'category', this.value)">
+                        <option value="drink" ${p.category === 'drink' ? 'selected' : ''}>Getränk</option>
+                        <option value="food" ${p.category === 'food' ? 'selected' : ''}>Speise / Verzehr</option>
+                    </select>
+                </td>
+                <td><input type="number" step="0.50" class="table-input" value="${p.price}" onchange="updateArticleField(${p.id}, 'price', this.value)"></td>
+                <td><input type="number" class="table-input" value="${p.stock}" onchange="updateArticleField(${p.id}, 'stock', this.value)"></td>
+                <td><input type="number" class="table-input" value="${p.minStock}" onchange="updateArticleField(${p.id}, 'minStock', this.value)"></td>
+                <td>${statusBadge}</td>
+                <td>${currentRole === 'board' ? `<button class="btn btn-danger" style="width:auto; padding:6px 10px; font-size:0.8rem; margin-bottom:0;" onclick="deleteArticle(${p.id})">Löschen</button>` : '<span style="opacity:0.5;">Geschützt</span>'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
     function addArticle() {
-        let name = document.getElementById('new-name').value.trim();
-        let price = parseFloat(document.getElementById('new-price').value);
-        let stock = parseInt(document.getElementById('new-stock').value);
-        let minStock = parseInt(document.getElementById('new-min').value);
+        const name = document.getElementById('new-name').value.trim();
+        const category = document.getElementById('new-category').value;
+        const price = parseFloat(document.getElementById('new-price').value) || 0;
+        const stock = parseInt(document.getElementById('new-stock').value) || 0;
+        const minStock = parseInt(document.getElementById('new-min').value) || 5;
 
-        if(!name || isNaN(price) || isNaN(stock)) return alert("Bitte alle Felder ausfüllen.");
-        
-        let category = (name.toLowerCase().includes('bratwurst') || name.toLowerCase().includes('brezel') || name.toLowerCase().includes('essen')) ? 'food' : 'drink';
+        if (!name) {
+            alertUser("Bitte geben Sie einen Artikelnamen ein.");
+            return;
+        }
 
-        products.push({ id: Date.now(), name, price, stock, minStock: isNaN(minStock) ? 5 : minStock, favorite: false, category });
-        document.getElementById('new-name').value = '';
-        saveData();
-        renderStock();
+        const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+        products.push({ id: newId, name, price, stock, minStock, favorite: false, category });
+        saveAllData();
+        renderStockTable();
+        renderProducts();
+        renderFavorites();
+        alertUser(`Artikel ${name} hinzugefügt!`);
+    }
+
+    function updateArticleField(id, field, val) {
+        const p = products.find(item => item.id === id);
+        if (p) {
+            if (field === 'name') p.name = val;
+            if (field === 'category') p.category = val;
+            if (field === 'price') p.price = parseFloat(val) || 0;
+            if (field === 'stock') p.stock = parseInt(val) || 0;
+            if (field === 'minStock') p.minStock = parseInt(val) || 0;
+            saveAllData();
+            renderProducts();
+            renderFavorites();
+        }
+    }
+
+    function toggleArticleFavorite(id) {
+        const p = products.find(item => item.id === id);
+        if (p) {
+            p.favorite = !p.favorite;
+            saveAllData();
+            renderFavorites();
+        }
     }
 
     function deleteArticle(id) {
-        if(confirm("Artikel löschen?")) {
-            products = products.filter(item => item.id !== id);
-            saveData();
-            renderStock();
-        }
+        products = products.filter(p => p.id !== id);
+        saveAllData();
+        renderStockTable();
+        renderProducts();
+        renderFavorites();
     }
 
-    function renderMembersTab() {
-        const tbody = document.getElementById('members-table-body');
-        tbody.innerHTML = '';
-        let totalDebtAll = 0;
-        members.forEach(m => {
-            totalDebtAll += m.debt;
-            tbody.innerHTML += `
-                <tr>
-                    <td><input type="text" class="table-input" style="width: 160px; text-align: left;" value="${m.name}" onchange="updateMemberText(${m.id}, this.value)"></td>
-                    <td><input type="number" class="table-input" step="0.50" value="${m.debt.toFixed(2)}" onchange="updateMemberDebt(${m.id}, this.value)"></td>
-                    <td>${m.lastActive}</td>
-                    <td>
-                        ${m.debt > 0 ? `<button class="btn-success" style="width:auto; padding:8px 14px; font-size:0.9rem;" onclick="payOffDebtFromTab(${m.id})">Deckel begleichen</button>` : '<span style="opacity: 0.6;">Keine Schulden</span>'}
-                        ${m.id !== 1 ? `<button class="btn-danger" style="width:auto; padding:8px 12px; font-size:0.9rem; margin-left:5px;" onclick="deleteMember(${m.id})">Löschen</button>` : ''}
-                    </td>
-                </tr>
-            `;
-        });
-        document.getElementById('stat-total-debt').innerText = totalDebtAll.toFixed(2) + ' €';
-        document.getElementById('stat-total-members').innerText = members.length;
-    }
-
-    function renderTurnoverShareTab() {
-        let percentInput = parseFloat(document.getElementById('percentage-input').value) || 0;
-        
-        document.querySelectorAll('.display-percent-label').forEach(el => {
-            el.innerText = percentInput;
-        });
-
-        // 1. Datenstrukturen aufbauen
-        let drinkSales = {};
-        let foodSales = {};
-
+    function exportLowStockExcel() {
+        let csvContent = "data:text/csv;charset=utf-8,Artikel;Aktueller Bestand;Mindestbestand;Status\n";
         products.forEach(p => {
-            let isDrink = p.category === 'drink' || (!p.category && !p.name.toLowerCase().includes('bratwurst') && !p.name.toLowerCase().includes('brezel') && !p.name.toLowerCase().includes('essen'));
-            if (isDrink) {
-                drinkSales[p.name] = { qty: 0, price: p.price };
-            } else {
-                foodSales[p.name] = { qty: 0, price: p.price };
+            if (p.stock <= p.minStock) {
+                csvContent += `${p.name};${p.stock};${p.minStock};Nachbestellen\n`;
             }
         });
-
-        transactions.forEach(t => {
-            if (t.type === 'Barbezahlt' || t.type === 'Deckel') {
-                if (t.items) {
-                    t.items.forEach(i => {
-                        if (i.name.includes('Deckel-Begleichung')) return;
-                        
-                        let matchedProd = products.find(p => p.name === i.name);
-                        let isDrink = matchedProd ? (matchedProd.category === 'drink' || (!matchedProd.category && !matchedProd.name.toLowerCase().includes('bratwurst') && !matchedProd.name.toLowerCase().includes('brezel') && !matchedProd.name.toLowerCase().includes('essen'))) : (!i.name.toLowerCase().includes('bratwurst') && !i.name.toLowerCase().includes('brezel') && !i.name.toLowerCase().includes('essen'));
-
-                        if (isDrink) {
-                            if (!drinkSales[i.name]) drinkSales[i.name] = { qty: 0, price: i.price };
-                            drinkSales[i.name].qty += i.qty;
-                        } else {
-                            if (!foodSales[i.name]) foodSales[i.name] = { qty: 0, price: i.price };
-                            foodSales[i.name].qty += i.qty;
-                        }
-                    });
-                }
-            }
-        });
-
-        // Rendering Getränke-Tabelle
-        const tbodyDrinks = document.getElementById('turnover-share-table-body');
-        tbodyDrinks.innerHTML = '';
-        let calculatedTotalDrinks = 0;
-        let calculatedTotalPercentageVal = 0;
-
-        for (let [name, data] of Object.entries(drinkSales)) {
-            let turnover = data.qty * data.price;
-            let singleVal = (data.price * percentInput) / 100;
-            let totalVal = (turnover * percentInput) / 100;
-
-            calculatedTotalDrinks += turnover;
-            calculatedTotalPercentageVal += totalVal;
-
-            tbodyDrinks.innerHTML += `
-                <tr>
-                    <td><strong>${name}</strong></td>
-                    <td>${data.qty} Stk.</td>
-                    <td>${data.price.toFixed(2)} €</td>
-                    <td>${turnover.toFixed(2)} €</td>
-                    <td style="color: var(--secondary); font-weight: 600;">${singleVal.toFixed(2)} €</td>
-                    <td style="color: var(--accent); font-weight: bold;">${totalVal.toFixed(2)} €</td>
-                </tr>
-            `;
-        }
-
-        // Rendering Speisen/Verzehr-Tabelle (100% ohne Prozentabzug)
-        const tbodyFood = document.getElementById('turnover-share-food-table-body');
-        tbodyFood.innerHTML = '';
-        let calculatedTotalFood = 0;
-
-        for (let [name, data] of Object.entries(foodSales)) {
-            let turnoverFood = data.qty * data.price;
-            calculatedTotalFood += turnoverFood;
-
-            tbodyFood.innerHTML += `
-                <tr>
-                    <td><strong>${name}</strong></td>
-                    <td>${data.qty} Stk.</td>
-                    <td>${data.price.toFixed(2)} €</td>
-                    <td style="color: #3498db; font-weight: bold;">${turnoverFood.toFixed(2)} €</td>
-                </tr>
-            `;
-        }
-
-        if (Object.keys(foodSales).length === 0 || calculatedTotalFood === 0) {
-            tbodyFood.innerHTML = `<tr><td colspan="4" style="text-align: center; opacity: 0.6;">Kein Verzehr / Speisen in diesem Zeitraum gebucht.</td></tr>`;
-        }
-
-        let combinedTotalVal = calculatedTotalPercentageVal + calculatedTotalFood;
-
-        // UI Statistiken aktualisieren
-        document.getElementById('share-total-drinks').innerText = calculatedTotalDrinks.toFixed(2) + ' €';
-        document.getElementById('share-total-percentage-val').innerText = calculatedTotalPercentageVal.toFixed(2) + ' €';
-        document.getElementById('share-total-food-val').innerText = calculatedTotalFood.toFixed(2) + ' €';
-        document.getElementById('share-total-combined-val').innerText = combinedTotalVal.toFixed(2) + ' €';
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `bestellliste_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
-    function updateMemberText(id, value) {
-        let m = members.find(item => item.id === id);
-        if(!m || !value.trim()) return;
-        m.name = value.trim();
-        saveData();
-    }
+    // --- EINSTELLUNGEN & PASSWÖRTER ---
+    function saveNewPasswords() {
+        const newMemberPw = document.getElementById('setting-pw-member').value.trim();
+        const newBoardPw = document.getElementById('setting-pw-board').value.trim();
 
-    function updateMemberDebt(id, value) {
-        let m = members.find(item => item.id === id);
-        if(!m) return;
-        let numVal = parseFloat(value);
-        if(isNaN(numVal) || numVal < 0) {
-            alert("Ungültiger Betrag.");
-            renderMembersTab();
+        if (!newMemberPw || !newBoardPw) {
+            alertUser("Passwörter dürfen nicht leer sein!");
             return;
         }
-        m.debt = numVal;
-        saveData();
-        renderMembersTab();
+
+        memberPassword = newMemberPw;
+        boardPassword = newBoardPw;
+        localStorage.setItem('verein_pw_member', memberPassword);
+        localStorage.setItem('verein_pw_board', boardPassword);
+        alertUser("Passwörter erfolgreich aktualisiert!");
     }
 
-    function payOffDebtFromTab(memberId) {
-        let m = members.find(item => item.id === memberId);
-        if(!m || m.debt <= 0) return;
-        if(confirm(`Hat "${m.name}" den Betrag von ${m.debt.toFixed(2)} € bar bezahlt?`)) {
-            m.debt = 0;
-            m.lastActive = new Date().toLocaleString('de-DE');
-            saveData();
-            renderMembersTab();
-            alert("Deckel beglichen.");
+    // --- SYSTEM & THEME ---
+    function toggleTheme() {
+        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.body.setAttribute('data-theme', currentTheme);
+        localStorage.setItem('verein_theme', currentTheme);
+        updateThemeButtonText();
+    }
+
+    function updateThemeButtonText() {
+        const btn = document.getElementById('theme-toggle-btn');
+        if (btn) {
+            btn.innerText = currentTheme === 'light' ? '🌙 Nachtmodus' : '☀️ Tagmodus';
         }
     }
 
-    function openNewMemberModal() {
-        let name = prompt("Name des neuen Mitglieds / Gastes:");
-        if(name && name.trim() !== "") {
-            members.push({ id: Date.now(), name: name.trim(), debt: 0, lastActive: "-" });
-            saveData();
-            renderPOS();
-            if(document.getElementById('tab-members').classList.contains('active')) renderMembersTab();
-        }
+    function exportBackupJson() {
+        const data = { products, members, transactions, manualCashBalance, recentBuyerIds, memberPassword, boardPassword };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute("href", dataStr);
+        dlAnchor.setAttribute("download", `vereinskasse_backup_${new Date().toLocaleDateString()}.json`);
+        document.body.appendChild(dlAnchor);
+        dlAnchor.click();
+        dlAnchor.remove();
     }
 
-    function deleteMember(id) {
-        if(confirm("Mitglied löschen?")) {
-            members = members.filter(m => m.id !== id);
-            saveData();
-            renderMembersTab();
-        }
+    function importBackupJson(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.products) products = data.products;
+                if (data.members) members = data.members;
+                if (data.transactions) transactions = data.transactions;
+                if (data.manualCashBalance !== undefined) manualCashBalance = data.manualCashBalance;
+                if (data.recentBuyerIds) recentBuyerIds = data.recentBuyerIds;
+                if (data.memberPassword) memberPassword = data.memberPassword;
+                if (data.boardPassword) boardPassword = data.boardPassword;
+                
+                saveAllData();
+                window.location.reload();
+            } catch (err) {
+                alertUser("Fehler beim Laden der Backup-Datei!");
+            }
+        };
+        reader.readAsText(file);
     }
 
     function resetData() {
-        if(confirm("Komplett auf Werkseinstellung zurücksetzen?")) {
+        if (confirm("ACHTUNG: Alle Daten werden zurückgesetzt. Fortfahren?")) {
             localStorage.clear();
-            location.reload();
+            window.location.reload();
         }
     }
 
-    renderPOS();
+    function saveAllData() {
+        localStorage.setItem('verein_products', JSON.stringify(products));
+        localStorage.setItem('verein_members', JSON.stringify(members));
+        localStorage.setItem('verein_transactions', JSON.stringify(transactions));
+        localStorage.setItem('verein_manual_cash', manualCashBalance);
+        localStorage.setItem('verein_recent_buyers', JSON.stringify(recentBuyerIds));
+    }
+
+    function alertUser(msg) {
+        alert(msg);
+    }
 </script>
 
 </body>
