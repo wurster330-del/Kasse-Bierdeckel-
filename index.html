@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA & Vollbild Meta-Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vereinskasse">
+    <meta name="mobile-web-app-capable" content="yes">
+    
     <title>Vereinskasse & Digitaler Bierdeckel (Mit Passwortschutz)</title>
     <style>
         :root {
@@ -154,8 +161,11 @@
 <div class="container">
     <header>
         <h1>🏛️ Vereins-Kassensystem</h1>
-        <div id="auth-status-badge" style="font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; display: none;">
-            Status: <span id="auth-role-text" style="font-weight: bold;">Gesperrt</span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="tab-btn" onclick="toggleFullscreen()" style="padding: 6px 12px; min-height: 36px; font-size: 0.85rem;" title="Vollbild umschalten">🖥️ Vollbild</button>
+            <div id="auth-status-badge" style="font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; display: none;">
+                Status: <span id="auth-role-text" style="font-weight: bold;">Gesperrt</span>
+            </div>
         </div>
     </header>
 
@@ -617,7 +627,6 @@
 </div>
 
 <script>
-    // Keine Demodaten mehr bei Werksreset -> leere Arrays
     let products = JSON.parse(localStorage.getItem('verein_products')) || [];
     let members = JSON.parse(localStorage.getItem('verein_members')) || [{ id: 1, name: "Barverkauf (Gast)", debt: 0, lastActive: "-" }];
     let transactions = JSON.parse(localStorage.getItem('verein_transactions')) || [];
@@ -645,6 +654,18 @@
         document.getElementById('setting-pw-member').value = memberPassword;
         document.getElementById('setting-pw-board').value = boardPassword;
     };
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                alertUser("Vollbildmodus konnte nicht aktiviert werden: " + err.message);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
 
     function switchTab(tabId, event) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
